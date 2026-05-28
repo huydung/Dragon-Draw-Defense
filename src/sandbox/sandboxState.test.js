@@ -9,7 +9,6 @@ import {
   deleteSelectedPoint,
   parsePointsJson,
   renameShape,
-  simplifyStrokeToTemplate,
   updateSelectedPoint,
   updateSelectedShape
 } from "./sandboxState.js";
@@ -66,19 +65,17 @@ describe("sandbox shape state", () => {
     expect(state.templates[state.selectedName].some(([x, y]) => x === 10 && y === 90)).toBe(false);
   });
 
-  test("simplifies raw freehand strokes into compact template anchors", () => {
-    const stroke = Array.from({ length: 80 }, (_, index) => ({
-      x: index,
-      y: index < 40 ? index : 80 - index
-    }));
-    const simplified = simplifyStrokeToTemplate(stroke, 4);
+  test("snaps points that are very close to existing anchors", () => {
+    let state = createSandboxState();
+    state = updateSelectedShape(state, [
+      [10, 10],
+      [90, 90]
+    ]);
 
-    expect(simplified.length).toBeLessThanOrEqual(4);
-    simplified.forEach(([x, y]) => {
-      expect(x).toBeGreaterThanOrEqual(0);
-      expect(x).toBeLessThanOrEqual(100);
-      expect(y).toBeGreaterThanOrEqual(0);
-      expect(y).toBeLessThanOrEqual(100);
-    });
+    state = appendSelectedPoint(state, [12, 11]);
+    expect(state.templates[state.selectedName].at(-1)).toEqual([10, 10]);
+
+    state = updateSelectedPoint(state, 1, [10.5, 12]);
+    expect(state.templates[state.selectedName][1]).toEqual([10, 10]);
   });
 });

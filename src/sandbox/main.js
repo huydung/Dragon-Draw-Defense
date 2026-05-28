@@ -11,7 +11,6 @@ import {
   deleteSelectedShape,
   parsePointsJson,
   renameShape,
-  simplifyStrokeToTemplate,
   updateSelectedShape,
   updateSelectedPoint
 } from "./sandboxState.js";
@@ -28,7 +27,8 @@ const elements = {
   deleteShape: document.querySelector("#delete-shape"),
   shapeName: document.querySelector("#shape-name"),
   renameShape: document.querySelector("#rename-shape"),
-  captureShape: document.querySelector("#capture-shape"),
+  undoEdit: document.querySelector("#undo-edit"),
+  redoEdit: document.querySelector("#redo-edit"),
   shapePoints: document.querySelector("#shape-points"),
   applyPoints: document.querySelector("#apply-points"),
   clearStroke: document.querySelector("#clear-stroke"),
@@ -43,6 +43,11 @@ let state = createSandboxState();
 let recognizer = createRecognizer();
 let selectedPointIndex = null;
 let isDraggingTemplatePoint = false;
+let dragSnapshot = null;
+const history = {
+  past: [],
+  future: []
+};
 const templateRenderer = new SandboxRenderer(elements.templateCanvas);
 const drawRenderer = new SandboxRenderer(elements.drawCanvas);
 const input = new GestureInput(elements.drawCanvas, {
@@ -89,24 +94,18 @@ function bindControls() {
   elements.addShape.addEventListener("click", () => {
     updateWithErrors(() => {
       const name = createDefaultShapeName(state.templates);
-      const points =
-        state.currentStroke.length > 0 ? simplifyStrokeToTemplate(state.currentStroke) : GAME_CONFIG.GESTURES.TEMPLATES.Earth;
-      state = addShape(state, name, points);
-      recognizer = createRecognizer();
+      applyHistoryEdit(() => {
+        state = addShape(state, name, GAME_CONFIG.GESTURES.TEMPLATES.Earth);
+        selectedPointIndex = null;
+      });
     });
   });
 
   elements.renameShape.addEventListener("click", () => {
     updateWithErrors(() => {
-      state = renameShape(state, elements.shapeName.value.trim());
-      recognizer = createRecognizer();
-    });
-  });
-
-  elements.captureShape.addEventListener("click", () => {
-    updateWithErrors(() => {
-      state = updateSelectedShape(state, simplifyStrokeToTemplate(state.currentStroke));
-      recognizer = createRecognizer();
+      applyHistoryEdit(() => {
+        state = renameShape(state, elements.shapeName.value.trim());
+      });
     });
   });
 
@@ -120,28 +119,40 @@ function bindControls() {
       if (selectedPointIndex === null) {
         throw new Error("Select an anchor point before deleting it.");
       }
-      state = deleteSelectedPoint(state, selectedPointIndex);
-      selectedPointIndex = Math.min(selectedPointIndex, state.templates[state.selectedName].length - 1);
-      recognizer = createRecognizer();
-      state = {
-        ...state,
-        status: "Deleted anchor point."
-      };
+      applyHistoryEdit(() => {
+        state = deleteSelectedPoint(state, selectedPointIndex);
+        selectedPointIndex = Math.min(selectedPointIndex, state.templates[state.selectedName].length - 1);
+        state = {
+          ...state,
+          status: "Deleted anchor point."
+        };
+      });
     });
   });
 
   elements.applyPoints.addEventListener("click", () => {
     updateWithErrors(() => {
-      state = updateSelectedShape(state, parsePointsJson(elements.shapePoints.value));
-      recognizer = createRecognizer();
+      applyHistoryEdit(() => {
+        state = updateSelectedShape(state, parsePointsJson(elements.shapePoints.value));
+      });
     });
   });
 
   elements.deleteShape.addEventListener("click", () => {
     updateWithErrors(() => {
-      state = deleteSelectedShape(state);
-      recognizer = createRecognizer();
+      applyHistoryEdit(() => {
+        state = deleteSelectedShape(state);
+        selectedPointIndex = null;
+      });
     });
+  });
+
+  elements.undoEdit.addEventListener("click", () => {
+    updateWithErrors(undoEdit);
+  });
+
+  elements.redoEdit.addEventListener("click", () => {
+    updateWithErrors(redoEdit);
   });
 
   elements.clearStroke.addEventListener("click", () => {
@@ -190,21 +201,23 @@ function handleTemplatePointerDown(event) {
   updateWithErrors(() => {
     if (hitIndex === null) {
       const point = templateRenderer.clientToTemplatePoint(event.clientX, event.clientY);
-      state = appendSelectedPoint(state, point);
-      selectedPointIndex = state.templates[state.selectedName].length - 1;
-      state = {
-        ...state,
-        status: "Added anchor point."
-      };
+      applyHistoryEdit(() => {
+        state = appendSelectedPoint(state, point);
+        selectedPointIndex = state.templates[state.selectedName].length - 1;
+        state = {
+          ...state,
+          status: "Added anchor point."
+        };
+      });
     } else {
       selectedPointIndex = hitIndex;
       state = {
         ...state,
         status: `Selected anchor ${hitIndex + 1}.`
       };
+      dragSnapshot = createSnapshot();
     }
     isDraggingTemplatePoint = true;
-    recognizer = createRecognizer();
   });
 }
 
@@ -232,9 +245,83 @@ function handleTemplatePointerUp(event) {
 
   event.preventDefault();
   isDraggingTemplatePoint = false;
+  if (dragSnapshot && !snapshotsEqual(dragSnapshot, createSnapshot())) {
+    history.past.push(dragSnapshot);
+    history.future = [];
+  }
+  dragSnapshot = null;
   if (elements.templateCanvas.hasPointerCapture(event.pointerId)) {
     elements.templateCanvas.releasePointerCapture(event.pointerId);
   }
+  render();
+}
+
+function applyHistoryEdit(action) {
+  const before = createSnapshot();
+  action();
+  if (!snapshotsEqual(before, createSnapshot())) {
+    history.past.push(before);
+    history.future = [];
+    recognizer = createRecognizer();
+  }
+}
+
+function undoEdit() {
+  const previous = history.past.pop();
+  if (!previous) {
+    state = {
+      ...state,
+      status: "Nothing to undo."
+    };
+    return;
+  }
+
+  history.future.push(createSnapshot());
+  restoreSnapshot(previous);
+  state = {
+    ...state,
+    status: "Undid template edit."
+  };
+}
+
+function redoEdit() {
+  const next = history.future.pop();
+  if (!next) {
+    state = {
+      ...state,
+      status: "Nothing to redo."
+    };
+    return;
+  }
+
+  history.past.push(createSnapshot());
+  restoreSnapshot(next);
+  state = {
+    ...state,
+    status: "Redid template edit."
+  };
+}
+
+function createSnapshot() {
+  return {
+    templates: structuredClone(state.templates),
+    selectedName: state.selectedName,
+    selectedPointIndex
+  };
+}
+
+function restoreSnapshot(snapshot) {
+  state = {
+    ...state,
+    templates: structuredClone(snapshot.templates),
+    selectedName: snapshot.selectedName
+  };
+  selectedPointIndex = snapshot.selectedPointIndex;
+  recognizer = createRecognizer();
+}
+
+function snapshotsEqual(firstSnapshot, secondSnapshot) {
+  return JSON.stringify(firstSnapshot) === JSON.stringify(secondSnapshot);
 }
 
 function findNearestTemplatePoint(clientX, clientY) {
@@ -316,7 +403,8 @@ function renderEditor() {
   elements.shapePoints.value = state.selectedName ? JSON.stringify(state.templates[state.selectedName], null, 2) : "";
   elements.deleteShape.disabled = !state.selectedName;
   elements.renameShape.disabled = !state.selectedName;
-  elements.captureShape.disabled = !state.selectedName || state.currentStroke.length < GAME_CONFIG.GESTURES.MIN_STROKE_POINTS;
+  elements.undoEdit.disabled = history.past.length === 0;
+  elements.redoEdit.disabled = history.future.length === 0;
   elements.applyPoints.disabled = !state.selectedName;
   elements.deletePoint.disabled =
     !state.selectedName || selectedPointIndex === null || state.templates[state.selectedName].length <= GAME_CONFIG.GESTURES.MIN_STROKE_POINTS;
