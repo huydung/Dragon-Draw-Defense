@@ -23,7 +23,29 @@ export class SandboxRenderer {
   renderTemplate(selectedTemplate = []) {
     this.clear();
     this.drawBackground();
-    this.drawTemplate(selectedTemplate);
+    this.drawTemplate(this.scaleTemplateToPreview(selectedTemplate));
+  }
+
+  scaleTemplateToPreview(points) {
+    if (points.length < this.config.GESTURES.MIN_STROKE_POINTS) {
+      return points;
+    }
+
+    const path = points.map(([x, y]) => ({ x, y }));
+    const bounds = getBounds(path);
+    const targetSize =
+      Math.min(this.config.PLAYFIELD.VIRTUAL_WIDTH, this.config.PLAYFIELD.VIRTUAL_HEIGHT) *
+      this.config.UI.TEMPLATE_PREVIEW_SCALE;
+    const scale = targetSize / Math.max(bounds.width, bounds.height);
+    const center = {
+      x: this.config.PLAYFIELD.VIRTUAL_WIDTH / 2,
+      y: this.config.PLAYFIELD.VIRTUAL_HEIGHT / 2
+    };
+
+    return path.map((point) => [
+      center.x + (point.x - bounds.center.x) * scale,
+      center.y + (point.y - bounds.center.y) * scale
+    ]);
   }
 
   renderStroke(stroke = []) {
@@ -165,4 +187,22 @@ export class SandboxRenderer {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function getBounds(points) {
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+
+  return {
+    width: Math.max(Number.EPSILON, maxX - minX),
+    height: Math.max(Number.EPSILON, maxY - minY),
+    center: {
+      x: (minX + maxX) / 2,
+      y: (minY + maxY) / 2
+    }
+  };
 }
