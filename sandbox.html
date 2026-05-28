@@ -27,10 +27,19 @@
 
         <section id="sandbox-stage-panel" aria-label="Drawing test ground">
           <div class="panel-heading">
-            <h2>Testing Ground</h2>
+            <h2>Glyph Lab</h2>
             <button id="clear-stroke" type="button">Clear Stroke</button>
           </div>
-          <canvas id="sandbox-canvas" aria-label="Draw shape test stroke"></canvas>
+          <div id="canvas-pair">
+            <section class="canvas-card" aria-label="Configured shape preview">
+              <h3>Config Shape</h3>
+              <canvas id="template-canvas" aria-label="Configured shape drawing order"></canvas>
+            </section>
+            <section class="canvas-card" aria-label="User drawing area">
+              <h3>Your Drawing</h3>
+              <canvas id="draw-canvas" aria-label="Draw shape test stroke"></canvas>
+            </section>
+          </div>
           <div id="match-result" aria-live="polite"></div>
         </section>
 

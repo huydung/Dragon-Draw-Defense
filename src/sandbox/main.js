@@ -17,7 +17,8 @@ import "./styles.css";
 const SAVE_TEMPLATES_ENDPOINT = "/__sandbox/save-templates";
 
 const elements = {
-  canvas: document.querySelector("#sandbox-canvas"),
+  templateCanvas: document.querySelector("#template-canvas"),
+  drawCanvas: document.querySelector("#draw-canvas"),
   shapeList: document.querySelector("#shape-list"),
   addShape: document.querySelector("#add-shape"),
   deleteShape: document.querySelector("#delete-shape"),
@@ -34,8 +35,16 @@ const elements = {
 
 let state = createSandboxState();
 let recognizer = createRecognizer();
-const renderer = new SandboxRenderer(elements.canvas);
-const input = new GestureInput(elements.canvas, {
+const templateRenderer = new SandboxRenderer(elements.templateCanvas);
+const drawRenderer = new SandboxRenderer(elements.drawCanvas);
+const input = new GestureInput(elements.drawCanvas, {
+  onChange(points) {
+    state = {
+      ...state,
+      currentStroke: points
+    };
+    renderCanvases();
+  },
   onCommit(points) {
     state = {
       ...state,
@@ -47,7 +56,8 @@ const input = new GestureInput(elements.canvas, {
 });
 
 applyTheme();
-renderer.start();
+templateRenderer.start();
+drawRenderer.start();
 input.start();
 bindControls();
 render();
@@ -167,8 +177,13 @@ function render() {
   renderShapeList();
   renderEditor();
   renderMatch();
-  renderer.render(state.currentStroke, state.selectedName ? state.templates[state.selectedName] : []);
+  renderCanvases();
   elements.saveStatus.textContent = state.status;
+}
+
+function renderCanvases() {
+  templateRenderer.renderTemplate(state.selectedName ? state.templates[state.selectedName] : []);
+  drawRenderer.renderStroke(state.currentStroke);
 }
 
 function renderShapeList() {

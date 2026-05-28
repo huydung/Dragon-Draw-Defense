@@ -20,6 +20,18 @@ export class SandboxRenderer {
     this.drawStroke(stroke);
   }
 
+  renderTemplate(selectedTemplate = []) {
+    this.clear();
+    this.drawBackground();
+    this.drawTemplate(selectedTemplate);
+  }
+
+  renderStroke(stroke = []) {
+    this.clear();
+    this.drawBackground();
+    this.drawStroke(stroke);
+  }
+
   resizeCanvas = () => {
     const pixelRatio = window.devicePixelRatio || 1;
     this.canvas.width = this.config.PLAYFIELD.VIRTUAL_WIDTH * pixelRatio;
@@ -85,21 +97,45 @@ export class SandboxRenderer {
     this.ctx.save();
     this.ctx.textAlign = "center";
     this.ctx.textBaseline = "middle";
-    this.ctx.font = `700 ${this.config.PLAYFIELD.SHIP_BADGE_RADIUS}px ${this.config.UI.FONT_FAMILY}`;
+    this.ctx.font = `700 ${this.config.PLAYFIELD.SHIP_BADGE_RADIUS - this.config.UI.BUTTON_RADIUS_PX}px ${this.config.UI.FONT_FAMILY}`;
 
     points.forEach((point, index) => {
+      const marker = this.getOffsetMarker(point, index, points);
       this.ctx.fillStyle = index === 0 ? this.config.GESTURES.TRAIL_COLOR : this.config.RENDER.COLORS.DEFENSE_LINE;
       this.ctx.beginPath();
-      this.ctx.arc(point.x, point.y, this.config.PLAYFIELD.SHIP_BADGE_RADIUS, 0, Math.PI * 2);
+      this.ctx.arc(marker.x, marker.y, this.config.PLAYFIELD.SHIP_BADGE_RADIUS - this.config.UI.BUTTON_RADIUS_PX, 0, Math.PI * 2);
       this.ctx.fill();
       this.ctx.fillStyle = this.config.RENDER.COLORS.PAGE_BACKGROUND;
-      this.ctx.fillText(String(index + 1), point.x, point.y);
+      this.ctx.fillText(String(index + 1), marker.x, marker.y);
+      this.ctx.strokeStyle = this.config.RENDER.COLORS.DEFENSE_LINE;
+      this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH;
+      this.drawLine(point, marker);
     });
 
     const nextToLast = points[points.length - 2];
     const last = points[points.length - 1];
     this.drawEndArrow(nextToLast, last);
     this.ctx.restore();
+  }
+
+  getOffsetMarker(point, index, points) {
+    const previous = points[index - 1] ?? point;
+    const next = points[index + 1] ?? point;
+    const tangent = {
+      x: next.x - previous.x,
+      y: next.y - previous.y
+    };
+    const length = Math.max(Number.EPSILON, Math.hypot(tangent.x, tangent.y));
+    const normal = {
+      x: -tangent.y / length,
+      y: tangent.x / length
+    };
+    const offset = this.config.PLAYFIELD.SHIP_BADGE_RADIUS + this.config.UI.HUD_GAP_PX;
+
+    return {
+      x: clamp(point.x + normal.x * offset, offset, this.config.PLAYFIELD.VIRTUAL_WIDTH - offset),
+      y: clamp(point.y + normal.y * offset, offset, this.config.PLAYFIELD.VIRTUAL_HEIGHT - offset)
+    };
   }
 
   drawEndArrow(from, to) {
@@ -125,4 +161,8 @@ export class SandboxRenderer {
     this.ctx.lineTo(to.x, to.y);
     this.ctx.stroke();
   }
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }

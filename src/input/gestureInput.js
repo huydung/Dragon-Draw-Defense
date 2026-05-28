@@ -72,6 +72,7 @@ export class GestureInput {
   recordPoint(point, nowMs) {
     this.points.push(point);
     this.trail.push({ ...point, createdAtMs: nowMs });
+    this.handlers.onChange?.(this.points.map((strokePoint) => ({ x: strokePoint.x, y: strokePoint.y })));
   }
 
   toVirtualPoint(event) {
