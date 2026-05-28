@@ -53,6 +53,10 @@ describe("sandbox shape state", () => {
 
   test("supports direct point editing on the selected shape", () => {
     let state = createSandboxState();
+    state = {
+      ...state,
+      selectedName: "Earth"
+    };
     state = appendSelectedPoint(state, [25.555, 75.444]);
 
     expect(state.templates[state.selectedName].at(-1)).toEqual([25.56, 75.44]);

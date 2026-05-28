@@ -68,10 +68,13 @@ export const GAME_CONFIG = {
     // SANDBOX_TEMPLATES_START
     TEMPLATES: {
       Fire: [
-        [15, 85],
-        [50, 15],
-        [85, 85],
-        [15, 85]
+        [55, 90],
+        [28, 62],
+        [45, 38],
+        [40, 12],
+        [72, 45],
+        [58, 58],
+        [55, 90]
       ],
       Wind: [
         [15, 20],

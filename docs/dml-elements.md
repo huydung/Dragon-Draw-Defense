@@ -4,7 +4,7 @@ Reference list used by the prototype config and sandbox.
 
 | Element | Prototype Glyph | Drawing Order |
 | --- | --- | --- |
-| Fire | Triangle / crest | bottom-left -> top -> bottom-right -> close |
+| Fire | Flame hook | bottom -> left flare -> inner rise -> top lick -> right flare -> center dip -> close |
 | Wind | Sharp V | top-left -> bottom-center -> top-right |
 | Earth | Mountain ridge | lower-left -> peak -> valley -> peak -> lower-right |
 | Water | Wave | left -> crest -> center -> trough -> right |
