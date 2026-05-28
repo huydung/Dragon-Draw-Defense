@@ -16,8 +16,11 @@ export class CanvasRenderer {
 
   render(state, trail, nowMs) {
     this.renderHud(state);
+    this.renderWaveBanner(state, nowMs);
+    this.renderGameOver(state);
     this.clear();
     this.drawBackground();
+    this.drawDamageFlash(state, nowMs);
     this.drawDefenseLine();
     this.drawDragons(state.activeElements);
     this.drawShips(state.ships);
@@ -44,6 +47,24 @@ export class CanvasRenderer {
     const element = this.hudElements.feedback;
     element.textContent = feedback?.text ?? "";
     element.dataset.kind = feedback?.kind ?? "";
+  }
+
+  renderWaveBanner(state, nowMs) {
+    if (!this.hudElements.waveBanner) {
+      return;
+    }
+
+    this.hudElements.waveBanner.textContent =
+      state.phase === "transition" && nowMs < state.transitionUntilMs ? `WAVE ${state.wave} START` : "";
+  }
+
+  renderGameOver(state) {
+    if (!this.hudElements.gameOver || !this.hudElements.finalScore) {
+      return;
+    }
+
+    this.hudElements.gameOver.hidden = !state.gameOver;
+    this.hudElements.finalScore.textContent = `Final Score: ${String(state.score).padStart(6, "0")}`;
   }
 
   clear() {
@@ -81,6 +102,19 @@ export class CanvasRenderer {
     this.ctx.fillStyle = this.config.RENDER.COLORS.DEFENSE_LINE;
     this.ctx.font = `${this.config.UI.PANEL_RADIUS_PX + this.config.UI.BUTTON_RADIUS_PX}px ${this.config.UI.FONT_FAMILY}`;
     this.ctx.fillText("DEFENSE LINE", this.config.PLAYFIELD.DAMAGE_PERIMETER_X + this.config.UI.HUD_GAP_PX, this.config.RENDER.DEFENSE_LABEL_Y);
+    this.ctx.restore();
+  }
+
+  drawDamageFlash(state, nowMs) {
+    if (!state.damageFlashUntilMs || nowMs >= state.damageFlashUntilMs) {
+      return;
+    }
+
+    const alpha = (state.damageFlashUntilMs - nowMs) / this.config.RENDER.DAMAGE_FLASH_DURATION_MS;
+    this.ctx.save();
+    this.ctx.globalAlpha = alpha * 0.36;
+    this.ctx.fillStyle = this.config.RENDER.COLORS.FAILURE;
+    this.ctx.fillRect(0, 0, this.config.PLAYFIELD.VIRTUAL_WIDTH, this.config.PLAYFIELD.VIRTUAL_HEIGHT);
     this.ctx.restore();
   }
 

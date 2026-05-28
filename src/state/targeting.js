@@ -1,21 +1,9 @@
 import { GAME_CONFIG } from "../config.js";
 import { calculateScore, isPrecisionGesture } from "./gameRules.js";
-import { createShipsForWave, selectWaveElements } from "./waveElements.js";
+import { createInitialGameState } from "./gameLoop.js";
 
 export function createInitialState(config = GAME_CONFIG, rng = Math.random) {
-  const wave = 1;
-  const activeElements = selectWaveElements(wave, rng, config);
-
-  return {
-    health: config.HEALTH.INITIAL_HEALTH,
-    wave,
-    activeElements,
-    score: 0,
-    ships: createShipsForWave(activeElements, config),
-    lasers: [],
-    feedback: null,
-    gameOver: false
-  };
+  return createInitialGameState(config, rng, 0);
 }
 
 export function findClosestMatchingShip(ships, weakness) {
@@ -49,6 +37,7 @@ export function applyGlyphStrike(state, gesture, nowMs, config = GAME_CONFIG) {
   return {
     ...state,
     score: state.score + scoreGain,
+    resolvedShipCount: (state.resolvedShipCount ?? 0) + 1,
     ships: state.ships.map((ship) => (ship.id === target.id ? { ...ship, active: false } : ship)),
     lasers: [
       ...state.lasers,

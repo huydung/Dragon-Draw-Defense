@@ -2,19 +2,24 @@ import { GAME_CONFIG } from "./config.js";
 import { GestureInput } from "./input/gestureInput.js";
 import { OneDollarRecognizer } from "./input/oneDollarRecognizer.js";
 import { CanvasRenderer } from "./render/canvasRenderer.js";
-import { applyGlyphStrike, createInitialState, pruneTransientState } from "./state/targeting.js";
+import { advanceGameState, createInitialGameState, restartGame } from "./state/gameLoop.js";
+import { applyGlyphStrike, pruneTransientState } from "./state/targeting.js";
 import "./styles.css";
 
 const canvas = document.querySelector("#game-canvas");
+const restartButton = document.querySelector("#restart-game");
 
 const renderer = new CanvasRenderer(canvas, {
   health: document.querySelector("#health"),
   wave: document.querySelector("#wave"),
   score: document.querySelector("#score"),
-  feedback: document.querySelector("#feedback")
+  feedback: document.querySelector("#feedback"),
+  waveBanner: document.querySelector("#wave-banner"),
+  gameOver: document.querySelector("#game-over"),
+  finalScore: document.querySelector("#final-score")
 });
 const recognizer = new OneDollarRecognizer();
-let gameState = createInitialState();
+let gameState = createInitialGameState(GAME_CONFIG, Math.random, performance.now());
 window.__VIKING_RAID_SENTRY__ = {
   config: GAME_CONFIG,
   getState: () => structuredClone(gameState)
@@ -42,6 +47,10 @@ document.documentElement.style.setProperty("--sandbox-offset", `${GAME_CONFIG.UI
 
 const input = new GestureInput(canvas, {
   onCommit(points) {
+    if (gameState.gameOver) {
+      return;
+    }
+
     const result = recognizer.recognize(points);
     const percent = (result.score * 100).toFixed(1);
 
@@ -65,9 +74,13 @@ const input = new GestureInput(canvas, {
 
 renderer.start();
 input.start();
+restartButton.addEventListener("click", () => {
+  gameState = restartGame(performance.now());
+});
 requestAnimationFrame(tick);
 
 function tick(nowMs) {
+  gameState = advanceGameState(gameState, nowMs);
   gameState = pruneTransientState(gameState, nowMs);
   renderer.render(gameState, input.getTrail(nowMs), nowMs);
   requestAnimationFrame(tick);

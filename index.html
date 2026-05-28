@@ -17,6 +17,16 @@
         <canvas id="game-canvas" aria-label="Gesture defense playfield"></canvas>
 
         <div id="feedback" aria-live="polite"></div>
+        <div id="wave-banner" aria-live="polite"></div>
+
+        <div id="game-over" hidden>
+          <section id="game-over-panel" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
+            <h1 id="game-over-title">DEFEAT</h1>
+            <p id="final-score"></p>
+            <button id="restart-game" type="button">Restart Prototype</button>
+            <div id="leaderboard-placeholder" aria-label="Future leaderboard placeholder"></div>
+          </section>
+        </div>
 
         <a id="sandbox-link" href="/sandbox.html">
           Sandbox
