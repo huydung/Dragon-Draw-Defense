@@ -121,7 +121,7 @@ export const GAME_CONFIG = {
   },
 
   UI: {
-    MAX_GAME_WIDTH_PX: 1100,
+    STAGE_ASPECT_RATIO: 16 / 9,
     SHELL_PADDING_PX: 14,
     HUD_HEIGHT_PX: 44,
     HUD_GAP_PX: 10,

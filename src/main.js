@@ -32,7 +32,9 @@ document.documentElement.style.setProperty("--muted-text-color", GAME_CONFIG.REN
 document.documentElement.style.setProperty("--accent-color", GAME_CONFIG.GESTURES.TRAIL_COLOR);
 document.documentElement.style.setProperty("--failure-color", GAME_CONFIG.RENDER.COLORS.FAILURE);
 document.documentElement.style.setProperty("--font-family", GAME_CONFIG.UI.FONT_FAMILY);
-document.documentElement.style.setProperty("--max-game-width", `${GAME_CONFIG.UI.MAX_GAME_WIDTH_PX}px`);
+document.documentElement.style.setProperty("--world-width", `${GAME_CONFIG.PLAYFIELD.VIRTUAL_WIDTH}`);
+document.documentElement.style.setProperty("--world-height", `${GAME_CONFIG.PLAYFIELD.VIRTUAL_HEIGHT}`);
+document.documentElement.style.setProperty("--stage-aspect-ratio", `${GAME_CONFIG.UI.STAGE_ASPECT_RATIO}`);
 document.documentElement.style.setProperty("--shell-padding", `${GAME_CONFIG.UI.SHELL_PADDING_PX}px`);
 document.documentElement.style.setProperty("--hud-height", `${GAME_CONFIG.UI.HUD_HEIGHT_PX}px`);
 document.documentElement.style.setProperty("--hud-gap", `${GAME_CONFIG.UI.HUD_GAP_PX}px`);
