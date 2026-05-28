@@ -20,32 +20,53 @@ export class SandboxRenderer {
     this.drawStroke(stroke);
   }
 
-  renderTemplate(selectedTemplate = []) {
+  renderTemplate(selectedTemplate = [], selectedPointIndex = null) {
     this.clear();
     this.drawBackground();
-    this.drawTemplate(this.scaleTemplateToPreview(selectedTemplate));
+    this.drawTemplate(selectedTemplate, selectedPointIndex, true);
   }
 
-  scaleTemplateToPreview(points) {
-    if (points.length < this.config.GESTURES.MIN_STROKE_POINTS) {
-      return points;
-    }
-
-    const path = points.map(([x, y]) => ({ x, y }));
-    const bounds = getBounds(path);
+  getPreviewMetrics() {
     const targetSize =
       Math.min(this.config.PLAYFIELD.VIRTUAL_WIDTH, this.config.PLAYFIELD.VIRTUAL_HEIGHT) *
       this.config.UI.TEMPLATE_PREVIEW_SCALE;
-    const scale = targetSize / Math.max(bounds.width, bounds.height);
-    const center = {
-      x: this.config.PLAYFIELD.VIRTUAL_WIDTH / 2,
-      y: this.config.PLAYFIELD.VIRTUAL_HEIGHT / 2
-    };
+    const left = (this.config.PLAYFIELD.VIRTUAL_WIDTH - targetSize) / 2;
+    const top = (this.config.PLAYFIELD.VIRTUAL_HEIGHT - targetSize) / 2;
 
-    return path.map((point) => [
-      center.x + (point.x - bounds.center.x) * scale,
-      center.y + (point.y - bounds.center.y) * scale
-    ]);
+    return {
+      left,
+      top,
+      size: targetSize,
+      scale: targetSize / 100
+    };
+  }
+
+  templatePointToVirtual([x, y]) {
+    const metrics = this.getPreviewMetrics();
+
+    return {
+      x: metrics.left + x * metrics.scale,
+      y: metrics.top + y * metrics.scale
+    };
+  }
+
+  clientToTemplatePoint(clientX, clientY) {
+    const virtualPoint = this.clientToVirtualPoint(clientX, clientY);
+    const metrics = this.getPreviewMetrics();
+
+    return [
+      clamp((virtualPoint.x - metrics.left) / metrics.scale, 0, 100),
+      clamp((virtualPoint.y - metrics.top) / metrics.scale, 0, 100)
+    ];
+  }
+
+  clientToVirtualPoint(clientX, clientY) {
+    const rect = this.canvas.getBoundingClientRect();
+
+    return {
+      x: ((clientX - rect.left) / rect.width) * this.config.PLAYFIELD.VIRTUAL_WIDTH,
+      y: ((clientY - rect.top) / rect.height) * this.config.PLAYFIELD.VIRTUAL_HEIGHT
+    };
   }
 
   renderStroke(stroke = []) {
@@ -82,14 +103,14 @@ export class SandboxRenderer {
     }
   }
 
-  drawTemplate(points) {
+  drawTemplate(points, selectedPointIndex = null, usePreviewTransform = false) {
     if (points.length < this.config.GESTURES.MIN_STROKE_POINTS) {
       return;
     }
 
-    const path = points.map(([x, y]) => ({ x, y }));
+    const path = points.map((point) => (usePreviewTransform ? this.templatePointToVirtual(point) : { x: point[0], y: point[1] }));
     this.drawPointPath(path, this.config.RENDER.COLORS.DEFENSE_LINE, this.config.GESTURES.TRAIL_WIDTH);
-    this.drawOrderMarkers(path);
+    this.drawOrderMarkers(path, selectedPointIndex);
   }
 
   drawStroke(points) {
@@ -115,7 +136,7 @@ export class SandboxRenderer {
     this.ctx.restore();
   }
 
-  drawOrderMarkers(points) {
+  drawOrderMarkers(points, selectedPointIndex = null) {
     this.ctx.save();
     this.ctx.textAlign = "center";
     this.ctx.textBaseline = "middle";
@@ -123,9 +144,20 @@ export class SandboxRenderer {
 
     points.forEach((point, index) => {
       const marker = this.getOffsetMarker(point, index, points);
-      this.ctx.fillStyle = index === 0 ? this.config.GESTURES.TRAIL_COLOR : this.config.RENDER.COLORS.DEFENSE_LINE;
+      this.ctx.fillStyle =
+        index === selectedPointIndex
+          ? this.config.RENDER.COLORS.FAILURE
+          : index === 0
+            ? this.config.GESTURES.TRAIL_COLOR
+            : this.config.RENDER.COLORS.DEFENSE_LINE;
       this.ctx.beginPath();
-      this.ctx.arc(marker.x, marker.y, this.config.PLAYFIELD.SHIP_BADGE_RADIUS - this.config.UI.BUTTON_RADIUS_PX, 0, Math.PI * 2);
+      this.ctx.arc(
+        marker.x,
+        marker.y,
+        this.config.PLAYFIELD.SHIP_BADGE_RADIUS - this.config.UI.BUTTON_RADIUS_PX,
+        0,
+        Math.PI * 2
+      );
       this.ctx.fill();
       this.ctx.fillStyle = this.config.RENDER.COLORS.PAGE_BACKGROUND;
       this.ctx.fillText(String(index + 1), marker.x, marker.y);

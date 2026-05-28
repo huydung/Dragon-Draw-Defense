@@ -7,13 +7,13 @@ Reference list used by the prototype config and sandbox.
 | Fire | Triangle / crest | bottom-left -> top -> bottom-right -> close |
 | Wind | Sharp V | top-left -> bottom-center -> top-right |
 | Earth | Horizontal line | left -> right |
-| Water | Wave | left crest path -> right |
-| Plant | Leaf sprout | stem up -> left leaf -> top -> right leaf -> stem |
-| Metal | Square plate | top-left -> top-right -> bottom-right -> bottom-left -> close |
+| Water | Wave | left -> crest -> trough -> right |
+| Plant | Sprout | base -> top -> left leaf -> right leaf |
+| Metal | Forge M | lower-left -> upper-left peak -> lower-mid -> upper-right peak |
 | Energy | Lightning bolt | top -> mid-left -> mid-right -> bottom-left |
-| Void | Spiral | center curl -> outward counterclockwise spiral |
+| Void | Squared hook | top-right -> top-left -> lower-left -> lower-right |
 | Light | Star | top point -> alternating outer/inner points -> close |
-| Shadow | Crescent | outer crescent top -> bottom -> inner curve -> close |
-| Prism | Diamond prism | top -> right -> bottom -> left -> top -> vertical -> horizontal facet |
+| Shadow | Crescent arc | upper-right -> mid-left -> lower-left -> lower-right |
+| Prism | Diamond | top -> right -> bottom -> left |
 
-The prototype currently uses single-stroke glyphs so drawing order matters. The sandbox shows the expected path order by rendering the selected template with a start marker, numbered anchor points, and an end arrow.
+The prototype currently uses single-stroke glyphs so drawing order matters. The sandbox shows the expected path order by rendering the selected template with a start marker, numbered anchor points, and an end arrow. Most templates intentionally use four anchors or fewer so they remain quick to draw and easy to author.

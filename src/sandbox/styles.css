@@ -177,6 +177,19 @@ button:disabled {
   cursor: crosshair;
 }
 
+.canvas-actions {
+  min-height: var(--hud-height);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--hud-gap);
+  align-items: center;
+}
+
+#template-edit-status {
+  color: var(--muted-text-color);
+  font-size: 0.9rem;
+}
+
 #match-result {
   min-height: var(--hud-height);
   display: grid;

@@ -3,13 +3,17 @@ import { GestureInput } from "../input/gestureInput.js";
 import { OneDollarRecognizer } from "../input/oneDollarRecognizer.js";
 import {
   addShape,
+  appendSelectedPoint,
   createDefaultShapeName,
   createRecognizerConfig,
   createSandboxState,
+  deleteSelectedPoint,
   deleteSelectedShape,
   parsePointsJson,
   renameShape,
-  updateSelectedShape
+  simplifyStrokeToTemplate,
+  updateSelectedShape,
+  updateSelectedPoint
 } from "./sandboxState.js";
 import { SandboxRenderer } from "./sandboxRenderer.js";
 import "./styles.css";
@@ -28,6 +32,8 @@ const elements = {
   shapePoints: document.querySelector("#shape-points"),
   applyPoints: document.querySelector("#apply-points"),
   clearStroke: document.querySelector("#clear-stroke"),
+  deletePoint: document.querySelector("#delete-point"),
+  templateEditStatus: document.querySelector("#template-edit-status"),
   matchResult: document.querySelector("#match-result"),
   saveConfig: document.querySelector("#save-config"),
   saveStatus: document.querySelector("#save-status")
@@ -35,6 +41,8 @@ const elements = {
 
 let state = createSandboxState();
 let recognizer = createRecognizer();
+let selectedPointIndex = null;
+let isDraggingTemplatePoint = false;
 const templateRenderer = new SandboxRenderer(elements.templateCanvas);
 const drawRenderer = new SandboxRenderer(elements.drawCanvas);
 const input = new GestureInput(elements.drawCanvas, {
@@ -74,13 +82,15 @@ function bindControls() {
       selectedName: button.dataset.shapeName,
       status: `Selected ${button.dataset.shapeName}.`
     };
+    selectedPointIndex = null;
     render();
   });
 
   elements.addShape.addEventListener("click", () => {
     updateWithErrors(() => {
       const name = createDefaultShapeName(state.templates);
-      const points = state.currentStroke.length > 0 ? pointsToPairs(state.currentStroke) : GAME_CONFIG.GESTURES.TEMPLATES.Earth;
+      const points =
+        state.currentStroke.length > 0 ? simplifyStrokeToTemplate(state.currentStroke) : GAME_CONFIG.GESTURES.TEMPLATES.Earth;
       state = addShape(state, name, points);
       recognizer = createRecognizer();
     });
@@ -95,8 +105,28 @@ function bindControls() {
 
   elements.captureShape.addEventListener("click", () => {
     updateWithErrors(() => {
-      state = updateSelectedShape(state, pointsToPairs(state.currentStroke));
+      state = updateSelectedShape(state, simplifyStrokeToTemplate(state.currentStroke));
       recognizer = createRecognizer();
+    });
+  });
+
+  elements.templateCanvas.addEventListener("pointerdown", handleTemplatePointerDown);
+  elements.templateCanvas.addEventListener("pointermove", handleTemplatePointerMove);
+  elements.templateCanvas.addEventListener("pointerup", handleTemplatePointerUp);
+  elements.templateCanvas.addEventListener("pointercancel", handleTemplatePointerUp);
+
+  elements.deletePoint.addEventListener("click", () => {
+    updateWithErrors(() => {
+      if (selectedPointIndex === null) {
+        throw new Error("Select an anchor point before deleting it.");
+      }
+      state = deleteSelectedPoint(state, selectedPointIndex);
+      selectedPointIndex = Math.min(selectedPointIndex, state.templates[state.selectedName].length - 1);
+      recognizer = createRecognizer();
+      state = {
+        ...state,
+        status: "Deleted anchor point."
+      };
     });
   });
 
@@ -148,6 +178,84 @@ function bindControls() {
   });
 }
 
+function handleTemplatePointerDown(event) {
+  if (!state.selectedName) {
+    return;
+  }
+
+  event.preventDefault();
+  elements.templateCanvas.setPointerCapture(event.pointerId);
+  const hitIndex = findNearestTemplatePoint(event.clientX, event.clientY);
+
+  updateWithErrors(() => {
+    if (hitIndex === null) {
+      const point = templateRenderer.clientToTemplatePoint(event.clientX, event.clientY);
+      state = appendSelectedPoint(state, point);
+      selectedPointIndex = state.templates[state.selectedName].length - 1;
+      state = {
+        ...state,
+        status: "Added anchor point."
+      };
+    } else {
+      selectedPointIndex = hitIndex;
+      state = {
+        ...state,
+        status: `Selected anchor ${hitIndex + 1}.`
+      };
+    }
+    isDraggingTemplatePoint = true;
+    recognizer = createRecognizer();
+  });
+}
+
+function handleTemplatePointerMove(event) {
+  if (!isDraggingTemplatePoint || selectedPointIndex === null || !state.selectedName) {
+    return;
+  }
+
+  event.preventDefault();
+  const point = templateRenderer.clientToTemplatePoint(event.clientX, event.clientY);
+  updateWithErrors(() => {
+    state = updateSelectedPoint(state, selectedPointIndex, point);
+    recognizer = createRecognizer();
+    state = {
+      ...state,
+      status: `Moved anchor ${selectedPointIndex + 1}.`
+    };
+  });
+}
+
+function handleTemplatePointerUp(event) {
+  if (!isDraggingTemplatePoint) {
+    return;
+  }
+
+  event.preventDefault();
+  isDraggingTemplatePoint = false;
+  if (elements.templateCanvas.hasPointerCapture(event.pointerId)) {
+    elements.templateCanvas.releasePointerCapture(event.pointerId);
+  }
+}
+
+function findNearestTemplatePoint(clientX, clientY) {
+  const points = state.templates[state.selectedName] ?? [];
+  const virtualPoint = templateRenderer.clientToVirtualPoint(clientX, clientY);
+  const hitRadius = GAME_CONFIG.UI.TEMPLATE_POINT_HIT_RADIUS;
+  let nearestIndex = null;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+
+  points.forEach((point, index) => {
+    const virtualTemplatePoint = templateRenderer.templatePointToVirtual(point);
+    const distance = Math.hypot(virtualTemplatePoint.x - virtualPoint.x, virtualTemplatePoint.y - virtualPoint.y);
+    if (distance <= hitRadius && distance < nearestDistance) {
+      nearestIndex = index;
+      nearestDistance = distance;
+    }
+  });
+
+  return nearestIndex;
+}
+
 function runMatch(points) {
   const result = recognizer.recognize(points);
   const percent = (result.score * 100).toFixed(1);
@@ -182,7 +290,7 @@ function render() {
 }
 
 function renderCanvases() {
-  templateRenderer.renderTemplate(state.selectedName ? state.templates[state.selectedName] : []);
+  templateRenderer.renderTemplate(state.selectedName ? state.templates[state.selectedName] : [], selectedPointIndex);
   drawRenderer.renderStroke(state.currentStroke);
 }
 
@@ -210,6 +318,10 @@ function renderEditor() {
   elements.renameShape.disabled = !state.selectedName;
   elements.captureShape.disabled = !state.selectedName || state.currentStroke.length < GAME_CONFIG.GESTURES.MIN_STROKE_POINTS;
   elements.applyPoints.disabled = !state.selectedName;
+  elements.deletePoint.disabled =
+    !state.selectedName || selectedPointIndex === null || state.templates[state.selectedName].length <= GAME_CONFIG.GESTURES.MIN_STROKE_POINTS;
+  elements.templateEditStatus.textContent =
+    selectedPointIndex === null ? "Click to add or drag anchors." : `Anchor ${selectedPointIndex + 1} selected.`;
 }
 
 function renderMatch() {
@@ -236,10 +348,6 @@ function updateStatus(status) {
 
 function createRecognizer() {
   return new OneDollarRecognizer(createRecognizerConfig(state.templates));
-}
-
-function pointsToPairs(points) {
-  return points.map(({ x, y }) => [Math.round(x * 100) / 100, Math.round(y * 100) / 100]);
 }
 
 function applyTheme() {

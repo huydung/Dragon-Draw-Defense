@@ -5,8 +5,12 @@ import {
   createRecognizerConfig,
   createSandboxState,
   deleteSelectedShape,
+  appendSelectedPoint,
+  deleteSelectedPoint,
   parsePointsJson,
   renameShape,
+  simplifyStrokeToTemplate,
+  updateSelectedPoint,
   updateSelectedShape
 } from "./sandboxState.js";
 
@@ -46,5 +50,35 @@ describe("sandbox shape state", () => {
       [3, 4]
     ]);
     expect(() => parsePointsJson("[[1,2]]")).toThrow(/at least/);
+  });
+
+  test("supports direct point editing on the selected shape", () => {
+    let state = createSandboxState();
+    state = appendSelectedPoint(state, [25.555, 75.444]);
+
+    expect(state.templates[state.selectedName].at(-1)).toEqual([25.56, 75.44]);
+
+    const editedIndex = state.templates[state.selectedName].length - 1;
+    state = updateSelectedPoint(state, editedIndex, [10, 90]);
+    expect(state.templates[state.selectedName][editedIndex]).toEqual([10, 90]);
+
+    state = deleteSelectedPoint(state, editedIndex);
+    expect(state.templates[state.selectedName].some(([x, y]) => x === 10 && y === 90)).toBe(false);
+  });
+
+  test("simplifies raw freehand strokes into compact template anchors", () => {
+    const stroke = Array.from({ length: 80 }, (_, index) => ({
+      x: index,
+      y: index < 40 ? index : 80 - index
+    }));
+    const simplified = simplifyStrokeToTemplate(stroke, 4);
+
+    expect(simplified.length).toBeLessThanOrEqual(4);
+    simplified.forEach(([x, y]) => {
+      expect(x).toBeGreaterThanOrEqual(0);
+      expect(x).toBeLessThanOrEqual(100);
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(y).toBeLessThanOrEqual(100);
+    });
   });
 });
