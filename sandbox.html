@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Viking Raid Sentry Sandbox</title>
+  </head>
+  <body>
+    <main id="sandbox-app" aria-label="Viking Raid Sentry shape sandbox">
+      <header id="sandbox-header">
+        <a href="/" id="game-link">Game</a>
+        <div>
+          <h1>Gesture Sandbox</h1>
+          <p>Shape library, recorder, matcher, and config writer.</p>
+        </div>
+        <button id="save-config" type="button">Save To Config</button>
+      </header>
+
+      <section id="sandbox-layout">
+        <aside id="shape-library" aria-label="Shape library">
+          <div class="panel-heading">
+            <h2>Shapes</h2>
+            <button id="add-shape" type="button">Add Shape</button>
+          </div>
+          <div id="shape-list"></div>
+        </aside>
+
+        <section id="sandbox-stage-panel" aria-label="Drawing test ground">
+          <div class="panel-heading">
+            <h2>Testing Ground</h2>
+            <button id="clear-stroke" type="button">Clear Stroke</button>
+          </div>
+          <canvas id="sandbox-canvas" aria-label="Draw shape test stroke"></canvas>
+          <div id="match-result" aria-live="polite"></div>
+        </section>
+
+        <aside id="shape-editor" aria-label="Shape editor">
+          <div class="panel-heading">
+            <h2>Editor</h2>
+            <button id="delete-shape" type="button">Delete</button>
+          </div>
+          <label>
+            Shape Name
+            <input id="shape-name" type="text" autocomplete="off" />
+          </label>
+          <div class="editor-actions">
+            <button id="rename-shape" type="button">Rename</button>
+            <button id="capture-shape" type="button">Use Current Stroke</button>
+          </div>
+          <label>
+            Template Points
+            <textarea id="shape-points" spellcheck="false"></textarea>
+          </label>
+          <button id="apply-points" type="button">Apply Points JSON</button>
+          <p id="save-status" aria-live="polite"></p>
+        </aside>
+      </section>
+    </main>
+
+    <script type="module" src="/src/sandbox/main.js"></script>
+  </body>
+</html>

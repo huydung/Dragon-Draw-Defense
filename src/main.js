@@ -6,11 +6,6 @@ import { applyGlyphStrike, createInitialState, pruneTransientState } from "./sta
 import "./styles.css";
 
 const canvas = document.querySelector("#game-canvas");
-const sandboxPanel = document.querySelector("#sandbox-panel");
-const sandboxToggle = document.querySelector("#sandbox-toggle");
-const sandboxClose = document.querySelector("#sandbox-close");
-const exportButton = document.querySelector("#export-shape");
-const exportBox = document.querySelector("#export-box");
 
 const renderer = new CanvasRenderer(canvas, {
   health: document.querySelector("#health"),
@@ -70,38 +65,10 @@ const input = new GestureInput(canvas, {
 
 renderer.start();
 input.start();
-bindSandboxControls();
 requestAnimationFrame(tick);
 
 function tick(nowMs) {
   gameState = pruneTransientState(gameState, nowMs);
   renderer.render(gameState, input.getTrail(nowMs), nowMs);
   requestAnimationFrame(tick);
-}
-
-function bindSandboxControls() {
-  sandboxToggle.addEventListener("click", () => {
-    const expanded = sandboxToggle.getAttribute("aria-expanded") === "true";
-    sandboxToggle.setAttribute("aria-expanded", String(!expanded));
-    sandboxPanel.hidden = expanded;
-  });
-
-  sandboxClose.addEventListener("click", () => {
-    sandboxToggle.setAttribute("aria-expanded", "false");
-    sandboxPanel.hidden = true;
-  });
-
-  exportButton.addEventListener("click", async () => {
-    const jsonOutput = JSON.stringify(input.getCurrentStroke());
-    console.log("[SANDBOX:EXPORT] Template generated:", jsonOutput);
-    exportBox.value = jsonOutput;
-
-    if (navigator.clipboard && jsonOutput.length > 0) {
-      try {
-        await navigator.clipboard.writeText(jsonOutput);
-      } catch (error) {
-        console.info("[SANDBOX:EXPORT] Clipboard copy skipped:", error.message);
-      }
-    }
-  });
 }

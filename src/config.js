@@ -51,6 +51,7 @@ export const GAME_CONFIG = {
     DOLLAR_ANGLE_RANGE_RADIANS: Math.PI / 4,
     DOLLAR_ANGLE_PRECISION_RADIANS: Math.PI / 90,
     DOLLAR_GOLDEN_RATIO_HALF: 0.5 * (-1 + Math.sqrt(5)),
+    // SANDBOX_TEMPLATES_START
     TEMPLATES: {
       Wind: [
         [0, 0],
@@ -68,6 +69,7 @@ export const GAME_CONFIG = {
         [10, 90]
       ]
     }
+    // SANDBOX_TEMPLATES_END
   },
 
   ELEMENTS: {

@@ -117,66 +117,20 @@ textarea {
   border-color: var(--failure-color);
 }
 
-#sandbox-toggle {
+#sandbox-link {
   position: absolute;
   z-index: 4;
   right: var(--sandbox-offset);
   bottom: var(--sandbox-offset);
   min-height: var(--hud-height);
+  display: grid;
+  place-items: center;
+  padding-inline: var(--hud-gap);
   border: var(--panel-border-width) solid color-mix(in srgb, var(--accent-color), transparent 45%);
   border-radius: var(--button-radius);
   background: var(--panel-background);
   color: var(--text-color);
   font-weight: 800;
+  text-decoration: none;
   cursor: pointer;
-}
-
-#sandbox-panel {
-  position: absolute;
-  z-index: 5;
-  right: var(--sandbox-offset);
-  bottom: calc(var(--sandbox-offset) + var(--hud-height) + var(--hud-gap));
-  width: min(var(--sandbox-width), calc(100% - var(--sandbox-offset) * 2));
-  padding: calc(var(--hud-gap) * 2);
-  border: var(--panel-border-width) solid color-mix(in srgb, var(--accent-color), transparent 35%);
-  border-radius: var(--panel-radius);
-  background: color-mix(in srgb, var(--page-background), black 12%);
-  box-shadow: 0 calc(var(--hud-gap) * 2) calc(var(--hud-gap) * 4) rgba(0, 0, 0, 0.32);
-}
-
-#sandbox-panel h2 {
-  margin: 0 0 var(--hud-gap);
-  font-size: 1rem;
-}
-
-#sandbox-panel button {
-  min-height: var(--hud-height);
-  border: 0;
-  border-radius: var(--button-radius);
-  background: var(--accent-color);
-  color: var(--page-background);
-  font-weight: 900;
-  cursor: pointer;
-}
-
-#sandbox-close {
-  position: absolute;
-  top: var(--hud-gap);
-  right: var(--hud-gap);
-  width: var(--hud-height);
-}
-
-#export-shape {
-  width: 100%;
-  margin-block: var(--hud-gap);
-}
-
-#export-box {
-  width: 100%;
-  height: var(--sandbox-textarea-height);
-  resize: vertical;
-  border: var(--panel-border-width) solid color-mix(in srgb, var(--accent-color), transparent 45%);
-  border-radius: var(--button-radius);
-  background: var(--panel-background);
-  color: var(--text-color);
 }

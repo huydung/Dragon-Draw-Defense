@@ -1,0 +1,213 @@
+:root {
+  color: var(--text-color);
+  background: var(--page-background);
+  font-family: var(--font-family);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--page-background);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button,
+#game-link {
+  min-height: var(--hud-height);
+  border: var(--panel-border-width) solid color-mix(in srgb, var(--accent-color), transparent 45%);
+  border-radius: var(--button-radius);
+  background: var(--panel-background);
+  color: var(--text-color);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+#sandbox-app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--hud-gap);
+  padding: calc(var(--hud-gap) * 2);
+}
+
+#sandbox-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: calc(var(--hud-gap) * 2);
+  align-items: center;
+}
+
+#sandbox-header h1,
+#sandbox-header p,
+.panel-heading h2,
+#save-status {
+  margin: 0;
+}
+
+#sandbox-header p,
+#save-status {
+  color: var(--muted-text-color);
+}
+
+#game-link {
+  display: grid;
+  place-items: center;
+  min-width: calc(var(--hud-height) * 2);
+  text-decoration: none;
+}
+
+#save-config,
+#add-shape {
+  background: var(--accent-color);
+  color: var(--page-background);
+}
+
+#sandbox-layout {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(360px, 2fr) minmax(260px, 0.9fr);
+  gap: var(--hud-gap);
+}
+
+#shape-library,
+#sandbox-stage-panel,
+#shape-editor {
+  min-width: 0;
+  min-height: 0;
+  border: var(--panel-border-width) solid color-mix(in srgb, var(--accent-color), transparent 55%);
+  border-radius: var(--panel-radius);
+  background: var(--panel-background);
+  padding: var(--hud-gap);
+}
+
+#shape-library,
+#shape-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hud-gap);
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hud-gap);
+}
+
+.panel-heading h2 {
+  font-size: 1rem;
+}
+
+#shape-list {
+  display: grid;
+  gap: var(--hud-gap);
+  overflow: auto;
+}
+
+.shape-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+}
+
+.shape-row.selected {
+  border-color: var(--accent-color);
+}
+
+.shape-row small {
+  color: var(--muted-text-color);
+}
+
+#sandbox-stage-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--hud-gap);
+}
+
+#sandbox-canvas {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  align-self: center;
+  border: var(--panel-border-width) solid color-mix(in srgb, var(--accent-color), transparent 45%);
+  border-radius: var(--panel-radius);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+#match-result {
+  min-height: var(--hud-height);
+  display: grid;
+  place-items: center;
+  border: var(--panel-border-width) solid color-mix(in srgb, var(--accent-color), transparent 60%);
+  border-radius: var(--panel-radius);
+  color: var(--muted-text-color);
+  text-align: center;
+}
+
+#match-result[data-kind="match"] {
+  color: var(--accent-color);
+}
+
+#match-result[data-kind="fail"] {
+  color: var(--failure-color);
+}
+
+label {
+  display: grid;
+  gap: calc(var(--hud-gap) / 2);
+  color: var(--muted-text-color);
+  font-size: 0.9rem;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: var(--panel-border-width) solid color-mix(in srgb, var(--accent-color), transparent 55%);
+  border-radius: var(--button-radius);
+  background: color-mix(in srgb, var(--page-background), white 4%);
+  color: var(--text-color);
+  padding: var(--hud-gap);
+}
+
+textarea {
+  min-height: calc(var(--hud-height) * 5);
+  resize: vertical;
+}
+
+.editor-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--hud-gap);
+}
+
+#delete-shape {
+  border-color: var(--failure-color);
+}
+
+@media (max-width: 980px) {
+  #sandbox-layout,
+  #sandbox-header {
+    grid-template-columns: 1fr;
+  }
+}
