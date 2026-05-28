@@ -1,0 +1,22 @@
+{
+  "name": "dmlprotogemini",
+  "version": "1.0.0",
+  "description": "Viking Raid Sentry browser prototype",
+  "private": true,
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "test": "vitest run",
+    "check": "npm run test && npm run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "type": "module",
+  "devDependencies": {
+    "@vitest/browser": "^4.1.7",
+    "playwright": "^1.60.0",
+    "vite": "^8.0.14",
+    "vitest": "^4.1.7"
+  }
+}
