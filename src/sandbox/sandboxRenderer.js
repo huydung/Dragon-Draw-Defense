@@ -53,11 +53,9 @@ export class SandboxRenderer {
       return;
     }
 
-    this.drawPointPath(
-      points.map(([x, y]) => ({ x, y })),
-      this.config.RENDER.COLORS.DEFENSE_LINE,
-      this.config.GESTURES.TRAIL_WIDTH
-    );
+    const path = points.map(([x, y]) => ({ x, y }));
+    this.drawPointPath(path, this.config.RENDER.COLORS.DEFENSE_LINE, this.config.GESTURES.TRAIL_WIDTH);
+    this.drawOrderMarkers(path);
   }
 
   drawStroke(points) {
@@ -81,6 +79,44 @@ export class SandboxRenderer {
     points.slice(1).forEach((point) => this.ctx.lineTo(point.x, point.y));
     this.ctx.stroke();
     this.ctx.restore();
+  }
+
+  drawOrderMarkers(points) {
+    this.ctx.save();
+    this.ctx.textAlign = "center";
+    this.ctx.textBaseline = "middle";
+    this.ctx.font = `700 ${this.config.PLAYFIELD.SHIP_BADGE_RADIUS}px ${this.config.UI.FONT_FAMILY}`;
+
+    points.forEach((point, index) => {
+      this.ctx.fillStyle = index === 0 ? this.config.GESTURES.TRAIL_COLOR : this.config.RENDER.COLORS.DEFENSE_LINE;
+      this.ctx.beginPath();
+      this.ctx.arc(point.x, point.y, this.config.PLAYFIELD.SHIP_BADGE_RADIUS, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.fillStyle = this.config.RENDER.COLORS.PAGE_BACKGROUND;
+      this.ctx.fillText(String(index + 1), point.x, point.y);
+    });
+
+    const nextToLast = points[points.length - 2];
+    const last = points[points.length - 1];
+    this.drawEndArrow(nextToLast, last);
+    this.ctx.restore();
+  }
+
+  drawEndArrow(from, to) {
+    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+    const arrowLength = this.config.PLAYFIELD.SHIP_BADGE_RADIUS + this.config.UI.BUTTON_RADIUS_PX;
+    const arrowSpread = Math.PI / 7;
+
+    this.ctx.strokeStyle = this.config.GESTURES.TRAIL_COLOR;
+    this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH + this.config.RENDER.CANVAS_BORDER_WIDTH;
+    this.drawLine(to, {
+      x: to.x - Math.cos(angle - arrowSpread) * arrowLength,
+      y: to.y - Math.sin(angle - arrowSpread) * arrowLength
+    });
+    this.drawLine(to, {
+      x: to.x - Math.cos(angle + arrowSpread) * arrowLength,
+      y: to.y - Math.sin(angle + arrowSpread) * arrowLength
+    });
   }
 
   drawLine(from, to) {

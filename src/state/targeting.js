@@ -1,12 +1,17 @@
 import { GAME_CONFIG } from "../config.js";
 import { calculateScore, isPrecisionGesture } from "./gameRules.js";
+import { createShipsForWave, selectWaveElements } from "./waveElements.js";
 
-export function createInitialState(config = GAME_CONFIG) {
+export function createInitialState(config = GAME_CONFIG, rng = Math.random) {
+  const wave = 1;
+  const activeElements = selectWaveElements(wave, rng, config);
+
   return {
     health: config.HEALTH.INITIAL_HEALTH,
-    wave: 1,
+    wave,
+    activeElements,
     score: 0,
-    ships: config.PLAYFIELD.STATIC_SHIPS.map((ship) => ({ ...ship, active: true })),
+    ships: createShipsForWave(activeElements, config),
     lasers: [],
     feedback: null,
     gameOver: false
@@ -35,8 +40,7 @@ export function applyGlyphStrike(state, gesture, nowMs, config = GAME_CONFIG) {
 
   const precision = isPrecisionGesture(gesture.score, config);
   const scoreGain = calculateScore(state.wave, precision, config);
-  const dragonIndex = config.ELEMENTS[gesture.name].dragonIndex;
-  const dragonY = config.PLAYFIELD.DRAGON_Y_POSITIONS[dragonIndex];
+  const dragonPosition = config.PLAYFIELD.DRAGON_POSITIONS[gesture.name];
 
   console.log(
     `[STATE:KILL] ${gesture.name} strike cleared ${target.id}. Score +${scoreGain}. Precision bonus: ${precision}.`
@@ -50,7 +54,7 @@ export function applyGlyphStrike(state, gesture, nowMs, config = GAME_CONFIG) {
       ...state.lasers,
       {
         id: `${target.id}-${nowMs}`,
-        from: { x: config.PLAYFIELD.DRAGON_X, y: dragonY },
+        from: dragonPosition,
         to: { x: target.x, y: target.y },
         color: config.ELEMENTS[gesture.name].color,
         expiresAtMs: nowMs + config.RENDER.LASER_DURATION_MS

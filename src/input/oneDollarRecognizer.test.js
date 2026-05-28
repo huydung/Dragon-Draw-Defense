@@ -2,12 +2,12 @@ import { describe, expect, test } from "vitest";
 import { OneDollarRecognizer } from "./oneDollarRecognizer.js";
 
 describe("$1 gesture recognizer integration", () => {
-  test("recognizes configured Wind, Earth, and Fire glyphs", () => {
+  test("recognizes all configured elemental glyph templates", () => {
     const recognizer = new OneDollarRecognizer();
 
-    expect(recognizer.recognize(toPoints([[0, 0], [50, 100], [100, 0]])).name).toBe("Wind");
-    expect(recognizer.recognize(toPoints([[0, 50], [100, 50]])).name).toBe("Earth");
-    expect(recognizer.recognize(toPoints([[10, 90], [50, 10], [90, 90], [10, 90]])).name).toBe("Fire");
+    for (const [name, points] of Object.entries(recognizer.config.GESTURES.TEMPLATES)) {
+      expect(recognizer.recognize(toPoints(points)).name).toBe(name);
+    }
   });
 
   test("rejects chaotic scribbles below the acceptance threshold", () => {

@@ -19,7 +19,7 @@ export class CanvasRenderer {
     this.clear();
     this.drawBackground();
     this.drawDefenseLine();
-    this.drawDragons();
+    this.drawDragons(state.activeElements);
     this.drawShips(state.ships);
     this.drawLasers(state.lasers);
     this.drawTrail(trail, nowMs);
@@ -84,25 +84,27 @@ export class CanvasRenderer {
     this.ctx.restore();
   }
 
-  drawDragons() {
+  drawDragons(activeElements = []) {
     Object.entries(this.config.ELEMENTS).forEach(([name, element]) => {
-      const y = this.config.PLAYFIELD.DRAGON_Y_POSITIONS[element.dragonIndex];
+      const position = this.config.PLAYFIELD.DRAGON_POSITIONS[name];
+      const isWaveActive = activeElements.includes(name);
       this.ctx.save();
+      this.ctx.globalAlpha = isWaveActive ? 1 : 0.42;
       this.ctx.fillStyle = this.config.RENDER.COLORS.DRAGON_FILL;
       this.ctx.strokeStyle = element.color;
       this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH + this.config.RENDER.CANVAS_BORDER_WIDTH;
       this.ctx.beginPath();
-      this.ctx.arc(this.config.PLAYFIELD.DRAGON_X, y, this.config.PLAYFIELD.DRAGON_RADIUS, 0, Math.PI * 2);
+      this.ctx.arc(position.x, position.y, this.config.PLAYFIELD.DRAGON_RADIUS, 0, Math.PI * 2);
       this.ctx.fill();
       this.ctx.stroke();
       this.ctx.fillStyle = this.config.RENDER.COLORS.TEXT;
       this.ctx.font = `700 ${this.config.PLAYFIELD.DRAGON_RADIUS}px ${this.config.UI.FONT_FAMILY}`;
       this.ctx.textAlign = "center";
       this.ctx.textBaseline = "middle";
-      this.ctx.fillText(element.label, this.config.PLAYFIELD.DRAGON_X, y);
-      this.ctx.font = `${this.config.UI.PANEL_RADIUS_PX + this.config.UI.BUTTON_RADIUS_PX}px ${this.config.UI.FONT_FAMILY}`;
+      this.ctx.fillText(element.label, position.x, position.y);
+      this.ctx.font = `${this.config.UI.PANEL_RADIUS_PX + this.config.RENDER.CANVAS_BORDER_WIDTH}px ${this.config.UI.FONT_FAMILY}`;
       this.ctx.fillStyle = this.config.RENDER.COLORS.MUTED_TEXT;
-      this.ctx.fillText(name, this.config.PLAYFIELD.DRAGON_X, y + this.config.PLAYFIELD.DRAGON_RADIUS + this.config.UI.HUD_GAP_PX);
+      this.ctx.fillText(name, position.x, position.y + this.config.PLAYFIELD.DRAGON_RADIUS + this.config.UI.HUD_GAP_PX);
       this.ctx.restore();
     });
   }

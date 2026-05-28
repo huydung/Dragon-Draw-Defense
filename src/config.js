@@ -6,16 +6,29 @@ export const GAME_CONFIG = {
     DEFENSE_LINE_X: 92,
     DAMAGE_PERIMETER_X: 110,
     DRAGON_X: 48,
-    DRAGON_Y_POSITIONS: [120, 225, 330],
-    DRAGON_RADIUS: 22,
+    DRAGON_RADIUS: 15,
+    DRAGON_POSITIONS: {
+      Fire: { x: 35, y: 94 },
+      Wind: { x: 77, y: 94 },
+      Earth: { x: 35, y: 151 },
+      Water: { x: 77, y: 151 },
+      Plant: { x: 35, y: 208 },
+      Metal: { x: 77, y: 208 },
+      Energy: { x: 35, y: 265 },
+      Void: { x: 77, y: 265 },
+      Light: { x: 35, y: 322 },
+      Shadow: { x: 77, y: 322 },
+      Prism: { x: 56, y: 379 }
+    },
     SHIP_WIDTH: 58,
     SHIP_HEIGHT: 30,
     SHIP_BADGE_RADIUS: 13,
-    STATIC_SHIPS: [
-      { id: "ship-fire-close", x: 300, y: 162, weakness: "Fire" },
-      { id: "ship-wind", x: 475, y: 95, weakness: "Wind" },
-      { id: "ship-earth", x: 570, y: 294, weakness: "Earth" },
-      { id: "ship-fire-far", x: 680, y: 228, weakness: "Fire" }
+    STATIC_SHIP_SLOTS: [
+      { id: "ship-slot-1", x: 300, y: 162 },
+      { id: "ship-slot-2", x: 475, y: 95 },
+      { id: "ship-slot-3", x: 570, y: 294 },
+      { id: "ship-slot-4", x: 680, y: 228 },
+      { id: "ship-slot-5", x: 390, y: 360 }
     ]
   },
 
@@ -25,6 +38,7 @@ export const GAME_CONFIG = {
 
   WAVES: {
     WAVE_1_SHIP_COUNT: 5,
+    WAVE_ELEMENT_COUNT: 5,
     BASE_SHIP_SPEED: 40,
     WAVE_2_SPEED_MULTIPLIER: 0.15,
     WAVE_SCALING_MULTIPLIER: 0.2,
@@ -53,6 +67,12 @@ export const GAME_CONFIG = {
     DOLLAR_GOLDEN_RATIO_HALF: 0.5 * (-1 + Math.sqrt(5)),
     // SANDBOX_TEMPLATES_START
     TEMPLATES: {
+      Fire: [
+        [10, 90],
+        [50, 10],
+        [90, 90],
+        [10, 90]
+      ],
       Wind: [
         [0, 0],
         [50, 100],
@@ -62,31 +82,132 @@ export const GAME_CONFIG = {
         [0, 50],
         [100, 50]
       ],
-      Fire: [
-        [10, 90],
-        [50, 10],
-        [90, 90],
-        [10, 90]
+      Water: [
+        [10, 50],
+        [30, 25],
+        [50, 50],
+        [70, 75],
+        [90, 50]
+      ],
+      Plant: [
+        [50, 90],
+        [50, 30],
+        [25, 50],
+        [50, 20],
+        [75, 50],
+        [50, 30]
+      ],
+      Metal: [
+        [20, 20],
+        [80, 20],
+        [80, 80],
+        [20, 80],
+        [20, 20]
+      ],
+      Energy: [
+        [60, 5],
+        [35, 45],
+        [55, 45],
+        [35, 95]
+      ],
+      Void: [
+        [50, 50],
+        [60, 45],
+        [65, 55],
+        [55, 70],
+        [35, 65],
+        [25, 45],
+        [45, 20],
+        [75, 30],
+        [90, 60],
+        [70, 90],
+        [30, 90],
+        [10, 55],
+        [30, 15]
+      ],
+      Light: [
+        [50, 5],
+        [62, 38],
+        [95, 38],
+        [68, 58],
+        [80, 92],
+        [50, 70],
+        [20, 92],
+        [32, 58],
+        [5, 38],
+        [38, 38],
+        [50, 5]
+      ],
+      Shadow: [
+        [70, 10],
+        [40, 12],
+        [20, 35],
+        [20, 65],
+        [40, 88],
+        [70, 90],
+        [50, 70],
+        [42, 50],
+        [50, 30],
+        [70, 10]
+      ],
+      Prism: [
+        [50, 5],
+        [92, 50],
+        [50, 95],
+        [8, 50],
+        [50, 5],
+        [50, 95],
+        [8, 50],
+        [92, 50]
       ]
     }
     // SANDBOX_TEMPLATES_END
   },
 
   ELEMENTS: {
+    Fire: {
+      label: "F",
+      color: "#ff9166"
+    },
     Wind: {
       label: "W",
-      dragonIndex: 0,
       color: "#77d8ff"
     },
     Earth: {
       label: "E",
-      dragonIndex: 1,
-      color: "#76d467"
+      color: "#c4934b"
     },
-    Fire: {
-      label: "F",
-      dragonIndex: 2,
-      color: "#ff9166"
+    Water: {
+      label: "A",
+      color: "#3aa6ff"
+    },
+    Plant: {
+      label: "P",
+      color: "#78d64b"
+    },
+    Metal: {
+      label: "M",
+      color: "#b7bec8"
+    },
+    Energy: {
+      label: "N",
+      color: "#f0d537"
+    },
+    Void: {
+      label: "V",
+      color: "#9b4bb3"
+    },
+    Light: {
+      label: "L",
+      color: "#f2e9bd"
+    },
+    Shadow: {
+      label: "S",
+      color: "#d2d5da"
+    },
+    Prism: {
+      label: "R",
+      color: "#9aaeff"
     }
   },
 

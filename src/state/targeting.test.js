@@ -4,7 +4,13 @@ import { applyGlyphStrike, createInitialState, findClosestMatchingShip } from ".
 
 describe("Viking Raid Sentry targeting", () => {
   test("targeting chooses the closest active ship with a matching weakness", () => {
-    const state = createInitialState();
+    const state = {
+      ships: [
+        { id: "ship-fire-far", x: 600, weakness: "Fire", active: true },
+        { id: "ship-fire-close", x: 300, weakness: "Fire", active: true },
+        { id: "ship-wind", x: 250, weakness: "Wind", active: true }
+      ]
+    };
     const target = findClosestMatchingShip(state.ships, "Fire");
 
     expect(target.id).toBe("ship-fire-close");
@@ -12,7 +18,14 @@ describe("Viking Raid Sentry targeting", () => {
 
   test("glyph strike removes only the closest matching ship and scores the hit", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    const state = createInitialState();
+    const state = {
+      ...createInitialState(),
+      wave: 1,
+      ships: [
+        { id: "ship-fire-far", x: 600, y: 100, weakness: "Fire", active: true },
+        { id: "ship-fire-close", x: 300, y: 100, weakness: "Fire", active: true }
+      ]
+    };
     const nextState = applyGlyphStrike(
       state,
       { name: "Fire", score: GAME_CONFIG.GESTURES.GESTURE_PRECISION_THRESHOLD },
