@@ -100,6 +100,10 @@ export function appendSelectedPoint(state, point) {
   }
 
   const points = state.templates[state.selectedName];
+  if (points.length >= GAME_CONFIG.UI.TEMPLATE_MAX_POINTS) {
+    throw new Error(`A template can use at most ${GAME_CONFIG.UI.TEMPLATE_MAX_POINTS} anchors.`);
+  }
+
   const nextPoint = snapPointToNearby(points, null, normalizePoint(point));
   return updateSelectedShape(state, [...points, nextPoint]);
 }
@@ -137,6 +141,10 @@ export function parsePointsJson(value) {
 export function normalizePoints(points) {
   if (!Array.isArray(points) || points.length < GAME_CONFIG.GESTURES.MIN_STROKE_POINTS) {
     throw new Error("A shape needs at least two points.");
+  }
+
+  if (points.length > GAME_CONFIG.UI.TEMPLATE_MAX_POINTS) {
+    throw new Error(`A shape can use at most ${GAME_CONFIG.UI.TEMPLATE_MAX_POINTS} anchor points.`);
   }
 
   return points.map(normalizePoint);

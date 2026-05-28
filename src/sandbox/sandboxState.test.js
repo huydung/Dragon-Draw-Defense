@@ -78,4 +78,11 @@ describe("sandbox shape state", () => {
     state = updateSelectedPoint(state, 1, [10.5, 12]);
     expect(state.templates[state.selectedName][1]).toEqual([10, 10]);
   });
+
+  test("rejects templates above the configured anchor cap", () => {
+    const state = createSandboxState();
+    const tooManyPoints = Array.from({ length: 8 }, (_, index) => [index, index]);
+
+    expect(() => updateSelectedShape(state, tooManyPoints)).toThrow(/at most 7/);
+  });
 });

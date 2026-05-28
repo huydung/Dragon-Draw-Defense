@@ -83,10 +83,11 @@ export const GAME_CONFIG = {
         [85, 50]
       ],
       Water: [
-        [10, 55],
-        [35, 35],
-        [65, 65],
-        [90, 45]
+        [10, 60],
+        [30, 35],
+        [50, 60],
+        [70, 85],
+        [90, 60]
       ],
       Plant: [
         [50, 90],
@@ -95,10 +96,13 @@ export const GAME_CONFIG = {
         [75, 45]
       ],
       Metal: [
-        [15, 85],
-        [35, 20],
-        [60, 85],
-        [85, 20]
+        [20, 25],
+        [80, 25],
+        [65, 50],
+        [80, 75],
+        [20, 75],
+        [35, 50],
+        [20, 25]
       ],
       Energy: [
         [62, 10],
@@ -113,17 +117,13 @@ export const GAME_CONFIG = {
         [75, 70]
       ],
       Light: [
-        [50, 5],
-        [62, 38],
-        [95, 38],
-        [68, 58],
-        [80, 92],
-        [50, 70],
-        [20, 92],
-        [32, 58],
-        [5, 38],
-        [38, 38],
-        [50, 5]
+        [50, 10],
+        [85, 30],
+        [85, 70],
+        [50, 90],
+        [15, 70],
+        [15, 30],
+        [50, 10]
       ],
       Shadow: [
         [72, 15],
@@ -231,6 +231,7 @@ export const GAME_CONFIG = {
     TEMPLATE_PREVIEW_SCALE: 0.85,
     TEMPLATE_POINT_HIT_RADIUS: 28,
     TEMPLATE_POINT_SNAP_DISTANCE: 4,
+    TEMPLATE_MAX_POINTS: 7,
     SANDBOX_WIDTH_PX: 310,
     SANDBOX_TEXTAREA_HEIGHT_PX: 150,
     SANDBOX_OFFSET_PX: 14,

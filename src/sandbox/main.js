@@ -409,7 +409,9 @@ function renderEditor() {
   elements.deletePoint.disabled =
     !state.selectedName || selectedPointIndex === null || state.templates[state.selectedName].length <= GAME_CONFIG.GESTURES.MIN_STROKE_POINTS;
   elements.templateEditStatus.textContent =
-    selectedPointIndex === null ? "Click to add or drag anchors." : `Anchor ${selectedPointIndex + 1} selected.`;
+    selectedPointIndex === null
+      ? `${state.selectedName ? state.templates[state.selectedName].length : 0}/${GAME_CONFIG.UI.TEMPLATE_MAX_POINTS} anchors. Click to add or drag.`
+      : `Anchor ${selectedPointIndex + 1} selected. ${state.templates[state.selectedName].length}/${GAME_CONFIG.UI.TEMPLATE_MAX_POINTS} anchors.`;
 }
 
 function renderMatch() {
