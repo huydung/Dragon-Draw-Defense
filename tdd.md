@@ -1,265 +1,199 @@
 TECHNICAL DESIGN DOCUMENT: VIKING RAID SENTRY PROTOTYPE
 
-1. System Architecture & Separation of Concerns
-
-To ensure clean code, ease of testing, and extreme flexibility during tuning, the prototype must strictly decouple its subsystems. The runtime architecture is split into five isolated layers:
-
-+-----------------------------------------------------------------+
-|                         CONFIG LAYER                            |
-|                          (config.js)                            |
-+-----------------------------------------------------------------+
-                                |
-                                v
-+-----------------------------------------------------------------+
-|                         INPUT LAYER                             |
-|          (Captures gestures, runs $1 Recognizer)               |
-+-----------------------------------------------------------------+
-                                |
-                                v
-+-----------------------------------------------------------------+
-|                         STATE ENGINE                            |
-|  (Manages Waves, Health, Active Ships, Score, Collision check)  |
-+-----------------------------------------------------------------+
-                                |
-                                v
-+-----------------------------------------------------------------+
-|                       RENDER / UI LAYER                         |
-|     (Draws Canvas, fades lines, updates DOM/SVG HUD elements)   |
-+-----------------------------------------------------------------+
-
-
-Module Breakdown
-
-Config Engine (src/config.js): The single source of truth containing all tweakable numerical parameters, including registered gesture templates. No constants are allowed in logic or render scripts.
-
-Gesture Recognizer (src/input/): Listens to pointer (mouse/touch) events, draws a temporary trailing line, and passes the coordinate array to an external, integrated $1 Gesture matching library (e.g., onedollar.js). It emits an event when a shape is successfully matched.
-
-Game State Controller (src/state/): Completely decoupled from the screen. It keeps track of the wave timelines, spawns ships, advances positions based on delta time ($dt$), validates damage collisions, calculates scores, and decrements health points.
-
-Render Pipeline (src/render/): Reads the current active state objects (such as ship positions) and paints them to the screen. It has no say in whether a ship is dead or alive; it simply draws the current state.
-
-2. Centralized Configuration (Zero Magic Numbers)
-
-All physical dimensions, speeds, colors, timing windows, and multipliers must live in src/config.js. This module is fully commented so a game designer or non-coder can open it and instantly modify gameplay characteristics without touching engine logic.
-
-// src/config.js
-
-export const GAME_CONFIG = {
-  // ==========================================
-  // PLAYFIELD & SCREEN SETTINGS
-  // ==========================================
-  /* Target canvas aspect ratio height (assumed coordinate system width is 800px) */
-  VIRTUAL_WIDTH: 800,
-  /* Target canvas aspect ratio height */
-  VIRTUAL_HEIGHT: 450,
-  
-  // ==========================================
-  // HEALTH & STATE CONSTANTS
-  // ==========================================
-  /* Starting Hit Points for the player's Defense Line. Recommended: 3 to 5 */
-  INITIAL_HEALTH: 3,
-  /* X-coordinate boundary (from left) where ships trigger structural damage */
-  DAMAGE_PERIMETER_X: 110,
-  
-  // ==========================================
-  // WAVE PROGRESSION & SPEED TUNING
-  // ==========================================
-  /* Base amount of ships spawned in the very first wave */
-  WAVE_1_SHIP_COUNT: 5,
-  /* Base speed of ships in pixels per second during Wave 1. Range: 30 - 80 */
-  BASE_SHIP_SPEED: 40,
-  /* Progressive multiplier applied to ship speeds in Wave 2. Recommended: 0.15 (+15%) */
-  WAVE_2_SPEED_MULTIPLIER: 0.15,
-  /* Accumulative compounding speed multiplier applied for Wave 3 and beyond. Recommended: 0.20 (+20% per wave) */
-  WAVE_SCALING_MULTIPLIER: 0.20,
-  /* Rest window between waves (in milliseconds) before the next banner clears */
-  WAVE_TRANSITION_DELAY_MS: 3000,
-  /* Minimum delay (ms) between subsequent ship spawns within a single wave */
-  MIN_SPAWN_INTERVAL_MS: 1500,
-  /* Maximum delay (ms) between subsequent ship spawns within a single wave */
-  MAX_SPAWN_INTERVAL_MS: 3000,
+1. Current Stack
 
-  // ==========================================
-  // SCORING CONFIGURATION
-  // ==========================================
-  /* Base score awarded for destroying a ship. Scaled by current Wave number */
-  BASE_SCORE_PER_KILL: 100,
-  /* Additional bonus score awarded if the gesture matching accuracy is highly precise */
-  PRECISION_BONUS_SCORE: 50,
+The prototype is a native JavaScript browser game using:
 
-  // ==========================================
-  // GESTURE & DRAWING SETTINGS
-  // ==========================================
-  /* Time (in milliseconds) for the visual drawing trace line to fade off screen completely */
-  TRAIL_FADE_DURATION_MS: 500,
-  /* Color of the player's drawing stroke trail in HEX format */
-  TRAIL_COLOR: "#00ffcc",
-  /* Stroke thickness of the player's drawing trail */
-  TRAIL_WIDTH: 4,
-  /* Accuracy threshold percentage (0.0 to 1.0) required to recognize a gesture. Range: 0.70 to 0.85 */
-  GESTURE_ACCEPTANCE_THRESHOLD: 0.75,
-  /* Precision threshold percentage (0.0 to 1.0) above which the player earns a scoring bonus. Recommended: 0.85 */
-  GESTURE_PRECISION_THRESHOLD: 0.85,
-  /* Number of normalized geometric coordinate points used by the $1 Recognizer algorithm. Recommended: 64 */
-  GESTURE_RESAMPLE_POINTS: 64,
+- Vite for local development and production builds.
+- Canvas 2D for the gameplay field and sandbox drawing panels.
+- Vitest for logic tests.
+- Playwright for browser smoke checks when needed.
+- A project-local $1 unistroke recognizer implementation in `src/input/oneDollarRecognizer.js`.
 
-  // ==========================================
-  // GESTURE TEMPLATE PATTERNS
-  // ==========================================
-  /* Pre-registered templates mapped to their coordinate strings for the $1 Recognizer */
-  TEMPLATES: {
-    Wind: [[0,0], [50,100], [100,0]],
-    Earth: [[0,50], [100,50]],
-    Fire: [[10,90], [50,10], [90,90], [10,90]]
-  }
-};
+2. Architecture
 
+The codebase is split into clear layers:
 
-3. Core Algorithms & Mathematical Formulations
+- Config: `src/config.js`
+- Input: `src/input/`
+- State engine: `src/state/`
+- Rendering: `src/render/`
+- Sandbox authoring: `src/sandbox/`
+- Vite middleware/tools: `tools/`
 
-A. Wave Scaling Math
+Rules:
 
-To calculate a ship's pixel speed $S_w$ during wave $w$, use the following scale progression:
+- Config remains the single source of truth for gameplay constants, dimensions, colors, timings, thresholds, templates, and render tuning.
+- State modules do not read the DOM or canvas.
+- Render modules do not decide game outcomes.
+- Input modules capture strokes and invoke recognition, but targeting and score changes happen in state modules.
+- Sandbox tools may write config through explicit save actions, but runtime game code must not mutate `GAME_CONFIG`.
 
-For Wave 1:
+3. Fixed World and Responsive Scaling
 
+The game simulation uses a fixed virtual playfield:
 
-$$S_1 = \text{BASE\_SHIP\_SPEED}$$
+- Width: 800
+- Height: 450
+- Aspect ratio: 16:9
 
-For Wave 2:
+All world calculations use this coordinate system. Browser layout scales the canvas to the full page with letterboxing. Do not use CSS pixel dimensions for gameplay rules.
 
+4. Centralized Configuration
 
-$$S_2 = S_1 \times (1 + \text{WAVE\_2\_SPEED\_MULTIPLIER})$$
+All tunable values live in `src/config.js`, grouped by purpose:
 
-For Wave $w \ge 3$:
+- `PLAYFIELD`: world dimensions, defense line, dragon slots, ship spawn bounds, ship dimensions.
+- `HEALTH`: starting health.
+- `WAVES`: wave counts, speed progression, selected element count, transition timings, spawn intervals.
+- `SCORE`: scoring and precision bonus values.
+- `GESTURES`: trail, recognizer thresholds, recognizer math constants, glyph templates.
+- `ELEMENTS`: labels and colors for Fire, Wind, Earth, Water, Plant, Metal, Energy, Void, Light, Shadow, Prism.
+- `RENDER`: colors, ship flag layout, ship asset paths, selection dialog layout, laser and feedback durations.
+- `UI`: responsive layout and sandbox/editor dimensions.
+- `LOGGING`: sampling intervals.
 
+No gameplay or render file should introduce hard-coded numbers when a config entry would be appropriate.
 
-$$S_w = S_2 \times (1 + \text{WAVE\_SCALING\_MULTIPLIER})^{w - 2}$$
+5. Gesture Recognition
 
-This ensures predictable pacing curves that can be fine-tuned purely via the config coefficients.
+The recognizer is based on the $1 unistroke algorithm:
 
-B. $1 Unistroke Gesture Recognizer Math
+- Resample the stroke to `GESTURE_RESAMPLE_POINTS`.
+- Rotate toward zero.
+- Scale and translate into a normalized space.
+- Compare against configured templates.
+- Accept when score is at least `GESTURE_ACCEPTANCE_THRESHOLD`.
 
-While the mathematical foundations are outlined below for theoretical context, developers must not implement this logic from scratch. Instead, import an existing, vetted, open-source library (such as onedollar.js or equivalent platform port).
+Important current decision:
 
-The library handles four mathematical normalization phases on the raw input array $P = [p_0, p_1, \dots, p_{M-1}]$ to compare it to templates $T$:
+- The prototype supports unistroke glyphs only.
+- Circle-like glyphs are represented by closed polygonal paths.
+- Multi-stroke symbols are out of scope until a recognizer upgrade is selected.
 
-Resample Path: Resample the sequence of points to a fixed number $N$ (configured by GESTURE_RESAMPLE_POINTS, usually 64) to ensure uniform point density:
+6. Glyph Authoring
 
+Glyph templates are stored as normalized point arrays in `GAME_CONFIG.GESTURES.TEMPLATES`.
 
-$$l = \frac{\text{Total Length of Path}}{N - 1}$$
+The separate sandbox page is the canonical authoring workflow. It provides:
 
-Rotate to Zero Degrees: Find the centroid $C$ of the points. Calculate the angle $\theta$ between the vector $(p_0 - C)$ and the horizontal axis. Rotate all points by $-\theta$ around $C$ to make the shape rotation-invariant.
+- A config-shape panel for editing the actual stored glyph.
+- A separate user-drawing panel for test strokes.
+- Point snapping for near-overlapping anchors.
+- Undo and redo.
+- Auto-updated template JSON display.
+- One-click save to `src/config.js`.
+- Live matching feedback.
 
-Scale and Translate: Scale the rotated shape non-uniformly to fit a normalized bounding box of size $1 \times 1$. Then, translate the shape so its centroid sits at coordinates $(0, 0)$.
+The sandbox save path is powered by Vite middleware. This is a development-only tool and should not be exposed as a production feature.
 
-Calculate Distance & Score: For each template $T_i$, compute the average Euclidean distance $d$ between corresponding points of the normalized input and the template. The similarity score is mapped between $0.0$ and $1.0$:
+The file `docs/original-glyph-proposals.json` preserves the earlier generated proposals for comparison.
 
+7. Wave and State Engine
 
-$$\text{Score} = 1 - \frac{d}{\frac{1}{2}\sqrt{2}}$$
+Core files:
 
+- `src/state/gameLoop.js`: wave transitions, spawning, movement, breaches, restart.
+- `src/state/gameRules.js`: score, precision, speed, damage rules.
+- `src/state/targeting.js`: closest matching ship selection and strike application.
+- `src/state/waveElements.js`: seeded random helper and active element selection.
 
-If $\text{Score} \ge \text{GESTURE\_ACCEPTANCE\_THRESHOLD}$, trigger a successful hit on the closest matching ship.
+Current wave behavior:
 
-4. Developer Workflow, Testing & Sandbox Utilities
+- Each wave selects `WAVE_ELEMENT_COUNT` elements from the 11-element roster.
+- Only the selected 5 elements can appear on ships in that wave.
+- Ships spawn off-screen right at random y positions.
+- Ships move left using delta-time integration.
+- Breached ships decrement health and increment resolved ship count.
+- Cleared waves automatically queue the next wave.
 
-A. Strict Conventional Commits
+Ship speed math:
 
-All developers must write commits conforming to the conventional format. A local pre-commit hook runs compilation checks before allowing code into the repository.
+- Wave 1: `BASE_SHIP_SPEED`.
+- Wave 2: `BASE_SHIP_SPEED * (1 + WAVE_2_SPEED_MULTIPLIER)`.
+- Wave 3+: Wave 2 speed multiplied by `(1 + WAVE_SCALING_MULTIPLIER) ** (wave - 2)`.
 
-feat: for new features (e.g., adding a new elemental shape).
+8. Rendering
 
-fix: for fixing runtime bugs (e.g., resolving coordinate scaling offsets on high-DPI screens).
+Core file: `src/render/canvasRenderer.js`.
 
-test: when writing or refactoring unit/integration test suites.
+The renderer draws:
 
-chore: config updates, workspace settings, or library dependency upgrades.
+- Background grid and defense line.
+- Five active dragons only.
+- Spawned ships.
+- Generated ship base variants from `public/ships/`.
+- Dynamic ship flag panels.
+- Animated glyph paths on ship flags.
+- Lasers, damage flash, drawing trail, feedback, selection dialog, and game over DOM state.
 
-B. Logging Protocol
+Ship glyph animation is supported by pure helpers in `src/render/glyphTemplateAnimation.js` so drawing-order logic can be unit tested separately from canvas rendering.
 
-Key systems must trace operations to the diagnostic console with explicit logging prefixes for quick profiling:
+9. Assets
 
-[INPUT:DRAW] Logs coordinate capture rates, pointer states, and trail paths.
+Generated ship bases are stored in:
 
-[INPUT:RECOGNIZED] Traces the exact shape string and confidence scores:
-"[INPUT:RECOGNIZED] Matched 'Fire' with 89.2% accuracy."
+- `public/ships/ship-base-1.png`
+- `public/ships/ship-base-2.png`
+- `public/ships/ship-base-3.png`
 
-[STATE:SPAWN] Outputs wave initialization logs, active ship metrics, and speed multipliers.
+They were generated with the Image skill on chroma-key backgrounds, processed to transparent PNGs, and resized for runtime use.
 
-[STATE:DAMAGE] Dispatched immediately when a ship crosses DAMAGE_PERIMETER_X:
-"[STATE:DAMAGE] Ship breached boundary. HP decremented. Current HP: 2/3."
+The ships are decorative bases. The playable glyph information is drawn dynamically by canvas on top of the flag panel so the same asset can represent any element.
 
-[STATE:KILL] Dispatched when a gesture coordinates a laser strike on a targeted ship.
+10. Logging Protocol
 
-C. Developer Sandbox & Live Pattern Recorder (Method B)
+Use explicit console prefixes:
 
-To ensure immediate support for complex, organic shapes later (like a spiral for a "Void" element or a wavy line for "Water"), plotting manual coordinates is forbidden. Developers must implement a toggleable diagnostic Sandbox Panel directly in the UI.
+- `[INPUT:DRAW]`: pointer coordinate capture and draw sampling.
+- `[INPUT:RECOGNIZED]`: recognizer result, accepted/rejected name, confidence.
+- `[STATE:SPAWN]`: wave queueing, active wave start, ship spawn details.
+- `[STATE:DAMAGE]`: defense-line breach and health change.
+- `[STATE:KILL]`: successful ship clear and score gain.
+- `[SANDBOX:*]`: sandbox authoring and save behavior.
 
-1. Implementation Blueprint:
+11. Testing
 
-Interactive Recorder Canvas: The screen drawing tracker must capture raw coordinates in temporary memory during pointer actions:
+Required command before committing:
 
+`npm run check`
 
-$$\text{Points} = [p_0, p_1, \dots, p_{M-1}]$$
+This runs:
 
-Export Action: A floating UI panel must include a button labeled "Export Drawn Shape".
+1. `npm run test`
+2. `npm run build`
 
-Stringification Output: Clicking the button converts the captured coordinates to a clean JSON string, prints it to the console, and exposes it in a copyable text area:
+Current test coverage includes:
 
-function exportActiveStroke() {
-  const jsonOutput = JSON.stringify(playerStrokePoints);
-  console.log("[SANDBOX:EXPORT] Template generated:", jsonOutput); 
-  document.getElementById("export-box").value = jsonOutput;
-}
+- Gesture recognizer behavior.
+- Score, precision, speed, and damage rules.
+- Wave selection and seeded random behavior.
+- Wave transition/spawn/movement/breach/restart behavior.
+- Targeting closest matching ship.
+- Sandbox state editing, snapping, undo/redo.
+- Glyph flag animation helper math.
 
+Browser smoke checks should be run after visual or interaction changes. Use Playwright screenshots for canvas-heavy changes because DOM assertions cannot verify most gameplay rendering.
 
-Integrate & Deploy: The designer draws the shape on screen, clicks "Export", and copies the printed array directly into GAME_CONFIG.TEMPLATES in src/config.js.
+12. Commit Discipline
 
-D. Automated Testing Blueprint
+Use conventional commits:
 
-Core state transitions must be backed by a clean test suite (using frameworks like Jest or Vitest) checking the following boundary scenarios:
+- `feat:` for player-visible features.
+- `fix:` for behavior fixes.
+- `test:` for tests.
+- `chore:` for build, config, or doc-only maintenance.
 
-// Example Test Cases for Junior Developers
-describe("Viking Raid Sentry - Core Rules & Math Tests", () => {
-  test("Score calculation applies wave and precision multipliers correctly", () => {
-    const score = calculateScore(1, false); // Wave 1, standard hit
-    expect(score).toBe(100);
+Per project instruction, after each turn:
 
-    const wave3PrecisionScore = calculateScore(3, true); // Wave 3, high precision hit
-    expect(wave3PrecisionScore).toBe(350); // (100 * 3) + 50
-  });
+1. Run the build/compile check.
+2. If it fails, fix it before committing.
+3. If it passes, commit all current changes with a clear conventional message.
 
-  test("Speed math escalates predictably according to GDD multipliers", () => {
-    const speedW1 = calculateShipSpeed(1); // Wave 1
-    const speedW2 = calculateShipSpeed(2); // Wave 2
-    const speedW3 = calculateShipSpeed(3); // Wave 3
+13. Known Technical Limits
 
-    expect(speedW2).toBeCloseTo(46);  // 40 * 1.15
-    expect(speedW3).toBeCloseTo(55.2); // 46 * 1.20
-  });
-
-  test("Ships crossing the damage perimeter correctly trigger hit point reduction", () => {
-    let mockState = { health: 3, gameOver: false };
-    mockState = handleShipBreach(mockState);
-    expect(mockState.health).toBe(2);
-    expect(mockState.gameOver).toBe(false);
-
-    // Drain remaining HP
-    mockState = handleShipBreach(mockState);
-    mockState = handleShipBreach(mockState);
-    expect(mockState.health).toBe(0);
-    expect(mockState.gameOver).toBe(true);
-  });
-});
-
-
-E. Automated Diagnostics
-
-Before confirming a successful local deployment, developers must check:
-
-Is the bundler compiling files without errors?
-
-Are all Unit tests passing cleanly?
-
-If sandbox limitations prevent running a live local development server directly in this current container environment, the developer is advised to spin up the server locally on their host machine using:
-npm install && npm run dev
+- Recognition is unistroke only.
+- Glyph matching can still confuse visually similar shapes if templates are too close.
+- Ship glyph flags are small by design; future art/layout changes should preserve readability.
+- The sandbox config writer is development-only.
+- There is no persistent player progress or remote score storage.

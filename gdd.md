@@ -2,121 +2,165 @@ PROTOTYPE GAME DESIGN DOCUMENT: VIKING RAID SENTRY
 
 1. Pitch
 
-A high-focus, gesture-drawing defense mini-game for Dragon Mania Legends. Players defend their island's border by actively sketching elemental glyphs onto the screen to unleash defensive strikes from their dragons, countering waves of encroaching Viking mechanical airships before they break through the perimeter.
+Viking Raid Sentry is a high-focus gesture defense prototype inspired by Dragon Mania Legends. Players defend an island perimeter by drawing elemental glyphs that command dragons to destroy incoming Viking airships before they breach the defense line.
 
 2. Design Pillars
 
-Tactical Urgency: The game relies on rapid visual identification of priority threats mixed with fast, accurate physical execution.
+Tactical Urgency: Players must read ship glyphs quickly, choose the right elemental response, and execute the matching drawing under pressure.
 
-Familiar Magic: Reuses core DML elements (Fire, Wind, Earth) and lore to instantly feel like an official spin-off extension.
+Familiar Magic: The prototype uses the 11 basic DML-style elements: Fire, Wind, Earth, Water, Plant, Metal, Energy, Void, Light, Shadow, and Prism.
 
-Low Friction, High Mastery: Easy to grasp with intuitive drawings, but high scores require spatial awareness and optimal targeting choices.
+Low Friction, High Mastery: A player can draw anywhere on the game canvas, but high scores depend on clean gestures, fast recognition, and prioritizing the closest matching ship.
+
+Readable Combat Language: Ships must clearly communicate their required glyph. The current implementation shows the target pattern on each ship flag and animates the path in drawing order.
 
 3. Core Loop
 
-[ Identify Closest Threat ] ➔ [ Match Glyph Weakness ] ➔ [ Sketch Gesture on Screen ] ➔ [ Dragon Fires / Ship Explodes ] ➔ [ Earn Score Points ] ➔ [ Face Faster Wave ]
-
+1. A pre-wave draft randomly selects 5 dragons from the full 11-element roster.
+2. Ships spawn from the right with glyph flags that show their elemental weakness.
+3. The player draws the matching glyph anywhere on the game canvas.
+4. The closest active ship with that weakness is struck by the matching dragon.
+5. The player earns score, survives the wave, and faces a faster wave.
 
 4. Core Mechanic: Gesture Countering
 
-The screen acts as an open canvas. Encroaching Viking ships display a distinct, glowing elemental weakness icon above them. Drawing the matching geometric shape anywhere on the gameplay canvas commands the player's back-line dragons to fire a homing elemental projectile, destroying the targeted ship instantly.
+The gameplay canvas is both the battlefield and the drawing surface. Pointer or touch strokes are converted into normalized point paths and compared against configured glyph templates using a $1 unistroke recognizer.
 
-5. Game Rules
+When a gesture is accepted, the game finds active ships matching that recognized element. The strike targets the matching ship closest to the left-side damage perimeter. One accepted drawing clears at most one ship.
 
-The Battlefield Layout:
+5. Current Element Roster
 
-Three of the player's dragons sit stationed in fixed decorative positions along the far-left edge of the screen (the Defense Line).
+All 11 basic elements are present in the prototype:
 
-Viking mechanical airships spawn off-screen to the right and sail continuously from right to left at variable vertical positions (no locked lanes).
+- Fire
+- Wind
+- Earth
+- Water
+- Plant
+- Metal
+- Energy
+- Void
+- Light
+- Shadow
+- Prism
 
-Targeting Priority (One Drawing = One Ship):
+Each wave randomly selects 5 of the 11 elements. Only those 5 dragons appear on the defense line during active combat. The full roster appears in the pre-wave selection dialog.
 
-When a player successfully draws a gesture, the game identifies all active ships on screen that share that specific elemental weakness.
+6. Glyph Design Decisions
 
-The system then executes the strike exclusively on the closest matching ship to the left-hand Defense Line.
+Glyphs are stored in `GAME_CONFIG.GESTURES.TEMPLATES` as normalized 0-100 point coordinates.
 
-The Gesture Catalog:
+Current authoring constraints:
 
-Wind Weakness: Represented by a sharp "V" shape.
+- Glyphs should fit comfortably inside a square.
+- Glyphs should be visually distinct across all 11 elements.
+- Most glyphs should stay within 7 anchor points, giving up to 6 simple path segments.
+- Extra points are allowed only for shapes that are very easy to draw and uniquely readable.
+- Circles are supported by polygonal approximation; Light currently uses a closed loop/circle-like shape.
+- The sandbox keeps prior proposal data in `docs/original-glyph-proposals.json` for reference.
 
-Earth Weakness: Represented by a direct Horizontal Line drawn from left to right.
+7. Battlefield Layout
 
-Fire Weakness: Represented by an upscale Triangle/Crest shape (drawn continuously).
+The world simulation uses a fixed 800x450 virtual coordinate system. The browser scales this 16:9 game canvas to the full available page with letterboxing, so gameplay math stays stable across screen sizes.
 
-Wave Progression Structure:
+The left side contains:
 
-The game progresses in distinct, sequential waves.
+- A dashed yellow defense/damage line.
+- Five active dragon slots for the current wave.
+- Health, wave, and score HUD across the top.
 
-Wave 1: 5 Viking ships spawn sequentially. Slow movement speed.
+The right side contains:
 
-Wave 2: 8 Viking ships spawn. Movement speed increases by 15%.
+- Viking airships spawning off-screen.
+- Ship flags displaying the required glyph.
+- Animated glyph drawing order on each flag.
 
-Wave 3+: 12+ Viking ships spawn per wave. Movement speed increases cumulatively by 20% per wave, creating an escalating survival challenge.
+8. Wave Rules
 
-A 3-second visual text banner ("WAVE X START") separates waves, giving the player a brief rest window.
+Wave progression is endless:
 
-Scoring System:
+- Wave 1: 5 ships.
+- Wave 2: 8 ships.
+- Wave 3: 12 ships.
+- Wave 4+: Wave 3 count plus 1 additional ship per wave after Wave 3.
 
-Base Kill: Destroying a ship awards 100 points multiplied by the current Wave number (e.g., a kill in Wave 3 awards 300 points).
+Ship speed:
 
-Precision Bonus: If the gesture matching algorithm detects a shape accuracy rating greater than 85%, an additional 50 points are added to that kill.
+- Wave 1 uses the base speed.
+- Wave 2 increases by 15%.
+- Wave 3+ scales exponentially using the configured 20% multiplier.
 
-Win and Lose States:
+Before each wave, a 3-second dragon draft dialog shows all 11 elements, rapidly highlights possible selections, then locks onto the 5 active dragons used in that wave.
 
-Win Condition: The prototype is an endless high-score survival loop. "Winning" means beating personal milestones on the local scoring system.
+9. Scoring, Win, and Lose States
 
-Lose Condition: Each Viking ship carries a health damage value. The player's left-hand Defense Line has a structural health pool of 3 Hit Points. If a single Viking ship successfully touches the left edge of the screen, it explodes, and the player loses 1 Hit Point. When the health pool hits 0, the game freeze-frames, displaying a "GAME OVER" menu with the final score.
+Base kill score: `BASE_SCORE_PER_KILL * current wave`.
 
-6. Controls
+Precision bonus: +50 if recognition confidence is at least `GESTURE_PRECISION_THRESHOLD`.
 
-Mobile (Touch-First):
+Win state: The prototype is currently endless high-score survival. There is no campaign victory condition yet.
 
-Draw Input: Touch and drag anywhere within the screen's central play space to draw a continuous line path.
+Lose state: The defense line has 3 health. Each breached ship removes 1 health. At 0 health, the game freezes and shows a Defeat overlay with final score and a restart button.
 
-Commit Input: Lifting the finger off the glass ends the gesture trail and immediately triggers the shape validation engine.
+10. Controls
 
-Desktop (Mouse Alternative):
+Desktop:
 
-Draw Input: Click and hold the Left Mouse Button while moving the cursor across the central play space to draw a line path.
+- Hold left mouse button and draw on the game canvas.
+- Release to submit the gesture.
 
-Commit Input: Releasing the Left Mouse Button ends the line trail and triggers the shape validation engine.
+Mobile or touch:
 
-7. UI Layout & Elements
+- Touch and drag on the game canvas.
+- Lift finger to submit the gesture.
 
-Heads-Up Display (HUD) - Top Margin:
+11. UI and UX Flow
 
-Left Side: Player Health indicator represented by 3 Heart Icons.
+Current implemented flow:
 
-Center: Current Wave Number (e.g., "WAVE 03").
+1. Load directly into the game view.
+2. Wave 1 begins with a 3-second dragon draft dialog.
+3. Active combat starts automatically.
+4. Waves continue until health reaches 0.
+5. Defeat overlay appears.
+6. Restart button resets health, score, ships, and Wave 1 state.
 
-Right Side: Current Score display counter (e.g., "SCORE: 014,500").
+The earlier title screen idea is not implemented and is no longer part of the current vertical slice.
 
-Gameplay Canvas - Central Core:
+12. Sandbox
 
-An open field where the player draws. A transient, glowing trailing line effect follows the user's cursor/finger path, fading out over 500 milliseconds.
+The sandbox is a separate page available from the game screen. It supports:
 
-Game Over Screen Overlay:
+- Viewing all glyph templates.
+- Editing template points directly on the config-shape canvas.
+- Drawing test strokes in a separate square canvas.
+- Live matching against the configured glyph library.
+- Snapping nearby points together.
+- Undo and redo for glyph editing.
+- Auto-updating the template JSON display.
+- Saving edited glyph templates back into `src/config.js` through the Vite middleware.
 
-A modal dialogue blocking interaction upon defeat. Displays "DEFEAT", the final score achieved, a "Restart Prototype" button, and an empty mock placeholder box for a future leaderboards module.
+13. Current Scope
 
-8. UX Flow
+Implemented:
 
-Launch app ➔ 2. Simple Title screen with a "Start Game" button ➔ 3. Brief 3-second countdown ➔ 4. Active gameplay (Wave 1 begins) ➔ 5. Endless escalation loop until Health reaches zero ➔ 6. Game Over overlay presentation ➔ 7. Pressing "Restart" immediately reloads the gameplay state.
+- Native JavaScript, Vite, Canvas prototype.
+- Fixed 800x450 world with responsive 16:9 letterboxing.
+- Real-time drawing trail.
+- $1 gesture recognizer.
+- 11-element glyph library.
+- Random 5-dragon wave draft.
+- Endless wave spawning, movement, breach damage, scoring, restart, and game over.
+- Generated Viking airship base variants.
+- Animated glyph flags on ships.
+- Separate glyph sandbox and config writer.
+- Vitest coverage for logic-heavy systems.
 
-9. Scope Specifications (Vertical Slice)
+Still out of scope:
 
-In-Scope:
-
-Fully working $1 Gesture recognition script for the 3 target shapes (V, Line, Triangle).
-
-Functional wave spawner with speed multipliers.
-
-Real-time text trackers for Score, Wave, and Health points.
-
-Basic, color-coded geometric shapes standing in for game assets (e.g., Green boxes for Dragons, Grey rectangles with Element badges for Viking ships).
-
-Non-Goals (Out of Scope for Prototype):
-
-Real-time server database integrations or functional live network leaderboards.
-
-Animated dragon models, complex particle impact explosions, background ambient music tracks, or multi-phase boss encounters.
+- Production DML art.
+- Animated dragon models.
+- Audio/music.
+- Leaderboards or server persistence.
+- Multi-stroke gesture recognition.
+- Bosses, powerups, campaign progression, or economy systems.
