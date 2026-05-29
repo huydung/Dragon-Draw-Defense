@@ -39,6 +39,7 @@ describe("Viking Raid Sentry targeting", () => {
     expect(nextState.lasers).toHaveLength(1);
     expect(nextState.explosions).toHaveLength(1);
     expect(nextState.explosions[0].color).toBe(GAME_CONFIG.ELEMENTS.Fire.color);
+    expect(nextState.explosions[0].sparks.length).toBeLessThanOrEqual(8);
     logSpy.mockRestore();
   });
 

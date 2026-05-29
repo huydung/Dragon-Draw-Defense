@@ -9,7 +9,15 @@ export class CanvasRenderer {
     this.config = config;
     this.shipImages = this.loadShipImages();
     this.dragonImages = this.loadDragonImages();
+    this.effectImages = this.loadEffectImages();
+    this.tintedEffectCache = new Map();
+    this.staticBackground = null;
+    this.staticBackgroundUsesImage = false;
+    this.hudSnapshot = {};
     this.backgroundImage = this.loadImage(this.config.RENDER.BACKGROUND_IMAGE_PATH);
+    this.backgroundImage.onload = () => {
+      this.staticBackground = null;
+    };
     this.resizeObserver = new ResizeObserver(this.resizeCanvas);
   }
 
@@ -59,18 +67,43 @@ export class CanvasRenderer {
     );
   }
 
+  loadEffectImages() {
+    const paths = this.config.RENDER.EFFECT_IMAGE_PATHS;
+    return {
+      muzzle: this.loadImage(paths.muzzle),
+      magicRing: this.loadImage(paths.magicRing),
+      bolt: this.loadImage(paths.bolt),
+      explosionFrames: paths.explosionFrames.map((path) => this.loadImage(path))
+    };
+  }
+
   resizeCanvas = () => {
     const { VIRTUAL_WIDTH, VIRTUAL_HEIGHT } = this.config.PLAYFIELD;
     const pixelRatio = window.devicePixelRatio || 1;
     this.canvas.width = VIRTUAL_WIDTH * pixelRatio;
     this.canvas.height = VIRTUAL_HEIGHT * pixelRatio;
     this.ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    this.staticBackground = null;
   };
 
   renderHud(state) {
-    this.hudElements.health.textContent = `${this.config.RENDER.HUD_HEART.repeat(state.health)}`;
-    this.hudElements.wave.textContent = `WAVE ${String(state.wave).padStart(2, "0")}`;
-    this.hudElements.score.textContent = `SCORE: ${String(state.score).padStart(6, "0")}`;
+    const nextSnapshot = {
+      health: `${this.config.RENDER.HUD_HEART.repeat(state.health)}`,
+      wave: `WAVE ${String(state.wave).padStart(2, "0")}`,
+      score: `SCORE: ${String(state.score).padStart(6, "0")}`
+    };
+
+    if (this.hudSnapshot.health !== nextSnapshot.health) {
+      this.hudElements.health.textContent = nextSnapshot.health;
+    }
+    if (this.hudSnapshot.wave !== nextSnapshot.wave) {
+      this.hudElements.wave.textContent = nextSnapshot.wave;
+    }
+    if (this.hudSnapshot.score !== nextSnapshot.score) {
+      this.hudElements.score.textContent = nextSnapshot.score;
+    }
+
+    this.hudSnapshot = nextSnapshot;
   }
 
   renderFeedback(feedback) {
@@ -132,39 +165,60 @@ export class CanvasRenderer {
   }
 
   drawBackground() {
+    this.ctx.drawImage(this.getStaticBackground(), 0, 0);
+  }
+
+  getStaticBackground() {
+    const imageReady = this.backgroundImage?.complete && this.backgroundImage.naturalWidth > 0;
+    if (this.staticBackground && this.staticBackgroundUsesImage === imageReady) {
+      return this.staticBackground;
+    }
+
+    this.staticBackground = this.createStaticBackground(imageReady);
+    this.staticBackgroundUsesImage = imageReady;
+    return this.staticBackground;
+  }
+
+  createStaticBackground(imageReady) {
     const colors = this.config.RENDER.COLORS;
     const width = this.config.PLAYFIELD.VIRTUAL_WIDTH;
     const height = this.config.PLAYFIELD.VIRTUAL_HEIGHT;
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    canvas.width = width;
+    canvas.height = height;
 
-    if (this.backgroundImage?.complete && this.backgroundImage.naturalWidth > 0) {
-      this.drawCoverImage(this.backgroundImage, 0, 0, width, height);
-      this.ctx.fillStyle = "rgba(5, 13, 23, 0.58)";
-      this.ctx.fillRect(0, 0, width, height);
+    if (imageReady) {
+      this.drawCoverImage(context, this.backgroundImage, 0, 0, width, height);
+      context.fillStyle = "rgba(5, 13, 23, 0.58)";
+      context.fillRect(0, 0, width, height);
     } else {
-      const gradient = this.ctx.createLinearGradient(0, 0, 0, height);
+      const gradient = context.createLinearGradient(0, 0, 0, height);
       gradient.addColorStop(0, colors.PLAYFIELD_TOP);
       gradient.addColorStop(1, colors.PLAYFIELD_BOTTOM);
-      this.ctx.fillStyle = gradient;
-      this.ctx.fillRect(0, 0, width, height);
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, width, height);
     }
 
-    this.ctx.strokeStyle = colors.GRID_LINE;
-    this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH;
+    context.strokeStyle = colors.GRID_LINE;
+    context.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH;
     for (let x = 0; x <= width; x += this.config.RENDER.BACKGROUND_GRID_STEP) {
-      this.drawLine({ x, y: 0 }, { x, y: height });
+      drawLineOn(context, { x, y: 0 }, { x, y: height });
     }
     for (let y = 0; y <= height; y += this.config.RENDER.BACKGROUND_GRID_STEP) {
-      this.drawLine({ x: 0, y }, { x: width, y });
+      drawLineOn(context, { x: 0, y }, { x: width, y });
     }
+
+    return canvas;
   }
 
-  drawCoverImage(image, x, y, width, height) {
+  drawCoverImage(context, image, x, y, width, height) {
     const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
     const sourceWidth = width / scale;
     const sourceHeight = height / scale;
     const sourceX = (image.naturalWidth - sourceWidth) / 2;
     const sourceY = (image.naturalHeight - sourceHeight) / 2;
-    this.ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
+    context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
   }
 
   drawDefenseLine() {
@@ -447,24 +501,25 @@ export class CanvasRenderer {
       const progress = 1 - Math.max(0, Math.min(1, remainingMs / this.config.RENDER.LASER_DURATION_MS));
       const pulse = Math.sin(progress * Math.PI);
       const color = laser.color ?? this.config.RENDER.COLORS.LASER_CORE;
+      const angle = Math.atan2(laser.to.y - laser.from.y, laser.to.x - laser.from.x);
+      const length = Math.hypot(laser.to.x - laser.from.x, laser.to.y - laser.from.y);
+      const center = {
+        x: (laser.from.x + laser.to.x) / 2,
+        y: (laser.from.y + laser.to.y) / 2
+      };
 
       this.ctx.save();
       this.ctx.globalCompositeOperation = "lighter";
       this.ctx.lineCap = "round";
       this.ctx.strokeStyle = color;
-      this.ctx.shadowColor = color;
-      this.ctx.shadowBlur = 18 + pulse * 18;
-      this.ctx.globalAlpha = 0.18 + pulse * 0.36;
-      this.ctx.lineWidth = this.config.RENDER.LASER_GLOW_WIDTH + pulse * this.config.UI.HUD_GAP_PX;
-      this.drawLine(laser.from, laser.to);
-      this.ctx.strokeStyle = color;
-      this.ctx.globalAlpha = 0.72;
-      this.ctx.lineWidth = this.config.RENDER.LASER_WIDTH + pulse * this.config.RENDER.CANVAS_BORDER_WIDTH * 3;
+      this.ctx.globalAlpha = 0.28 + pulse * 0.16;
+      this.ctx.lineWidth = this.config.RENDER.LASER_WIDTH + pulse * 2;
       this.drawLine(laser.from, laser.to);
       this.ctx.strokeStyle = this.config.RENDER.COLORS.LASER_CORE;
-      this.ctx.globalAlpha = 0.92;
-      this.ctx.lineWidth = Math.max(2, this.config.RENDER.LASER_WIDTH * 0.45 + pulse * 2);
+      this.ctx.globalAlpha = 0.74;
+      this.ctx.lineWidth = 1.5 + pulse;
       this.drawLine(laser.from, laser.to);
+      this.drawTintedSprite("bolt", color, center.x, center.y, 26 + pulse * 6, length * 0.88, angle - Math.PI / 2, 0.08 + pulse * 0.12);
       this.drawMuzzleFlash(laser.from, color, pulse);
       this.drawImpactBurst(laser, progress, pulse, color);
       this.ctx.restore();
@@ -476,20 +531,8 @@ export class CanvasRenderer {
       return;
     }
 
-    const radius = this.config.RENDER.DRAGON_ATTACK_AURA_RADIUS * (0.7 + pulse * 0.45);
-    const gradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
-    gradient.addColorStop(0, this.config.RENDER.COLORS.LASER_CORE);
-    gradient.addColorStop(0.35, color);
-    gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
-
-    this.ctx.save();
-    this.ctx.globalCompositeOperation = "lighter";
-    this.ctx.globalAlpha = 0.18 + pulse * 0.38;
-    this.ctx.fillStyle = gradient;
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, radius, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.restore();
+    const size = this.config.RENDER.DRAGON_ATTACK_AURA_RADIUS * (1.3 + pulse * 0.9);
+    this.drawTintedSprite("magicRing", color, 0, 0, size, size, pulse * Math.PI * 0.25, 0.2 + pulse * 0.4);
   }
 
   drawDragonPortrait(name, centerX, centerY, size) {
@@ -512,44 +555,15 @@ export class CanvasRenderer {
   }
 
   drawMuzzleFlash(point, color, pulse) {
-    const radius = this.config.RENDER.LASER_MUZZLE_RADIUS * (0.55 + pulse * 0.45);
-    const gradient = this.ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius);
-    gradient.addColorStop(0, this.config.RENDER.COLORS.LASER_CORE);
-    gradient.addColorStop(0.45, color);
-    gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
-    this.ctx.fillStyle = gradient;
-    this.ctx.globalAlpha = 0.74;
-    this.ctx.beginPath();
-    this.ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-    this.ctx.fill();
+    const size = this.config.RENDER.LASER_MUZZLE_RADIUS * (1.4 + pulse * 1.6);
+    this.drawTintedSprite("muzzle", color, point.x, point.y, size, size, -Math.PI / 2, 0.42 + pulse * 0.36);
   }
 
   drawImpactBurst(laser, progress, pulse, color) {
-    const radius = this.config.RENDER.LASER_IMPACT_RADIUS * (0.35 + progress * 0.95);
-
-    this.ctx.strokeStyle = color;
-    this.ctx.globalAlpha = Math.max(0, 1 - progress) * 0.78;
-    this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH * 3;
-    this.ctx.beginPath();
-    this.ctx.arc(laser.to.x, laser.to.y, radius, 0, Math.PI * 2);
-    this.ctx.stroke();
-
-    for (let index = 0; index < this.config.RENDER.LASER_PARTICLE_COUNT; index += 1) {
-      const angle = seededAngle(laser.id, index);
-      const distance = this.config.RENDER.LASER_PARTICLE_DISTANCE * progress * (0.45 + (index % 5) * 0.12);
-      const sparkLength = this.config.UI.HUD_GAP_PX * (0.5 + pulse * 0.7);
-      const x = laser.to.x + Math.cos(angle) * distance;
-      const y = laser.to.y + Math.sin(angle) * distance;
-      this.ctx.strokeStyle = index % 3 === 0 ? this.config.RENDER.COLORS.LASER_CORE : color;
-      this.ctx.globalAlpha = Math.max(0, 1 - progress) * 0.95;
-      this.drawLine(
-        { x, y },
-        {
-          x: x + Math.cos(angle) * sparkLength,
-          y: y + Math.sin(angle) * sparkLength
-        }
-      );
-    }
+    const fade = Math.max(0, 1 - progress);
+    const radius = this.config.RENDER.LASER_IMPACT_RADIUS * (0.9 + pulse * 0.7);
+    this.drawTintedSprite("magicRing", color, laser.to.x, laser.to.y, radius * 2.1, radius * 2.1, progress * Math.PI, 0.24 + fade * 0.3);
+    this.drawTintedSprite("muzzle", color, laser.to.x, laser.to.y, radius * 1.35, radius * 1.35, Math.PI, 0.3 + pulse * 0.32);
   }
 
   drawExplosions(explosions = [], nowMs) {
@@ -559,53 +573,78 @@ export class CanvasRenderer {
       const pulse = Math.sin(progress * Math.PI);
       const fade = Math.max(0, 1 - progress);
       const color = explosion.color ?? this.config.RENDER.COLORS.LASER_CORE;
-      const ringRadius = this.config.RENDER.EXPLOSION_RING_RADIUS * (0.22 + progress);
+      const frameIndex = Math.min(
+        this.effectImages.explosionFrames.length - 1,
+        Math.floor(progress * this.effectImages.explosionFrames.length)
+      );
+      const frame = this.effectImages.explosionFrames[frameIndex];
+      const ringSize = this.config.RENDER.EXPLOSION_RING_RADIUS * (1.1 + progress * 1.3);
+      const blastSize = this.config.RENDER.EXPLOSION_RING_RADIUS * (1.15 + pulse * 1.1);
 
-      this.ctx.save();
-      this.ctx.globalCompositeOperation = "lighter";
-      this.ctx.lineCap = "round";
-      this.ctx.lineJoin = "round";
-      this.ctx.shadowColor = color;
-      this.ctx.shadowBlur = 20 * fade + 10;
+      this.drawTintedSprite("magicRing", color, explosion.x, explosion.y, ringSize, ringSize, progress * Math.PI * 0.8, 0.18 + fade * 0.28);
+      this.drawSprite(frame, explosion.x, explosion.y, blastSize, blastSize, progress * Math.PI * 0.35, 0.72 + pulse * 0.2, "lighter");
 
-      const gradient = this.ctx.createRadialGradient(explosion.x, explosion.y, 0, explosion.x, explosion.y, ringRadius);
-      gradient.addColorStop(0, this.config.RENDER.COLORS.LASER_CORE);
-      gradient.addColorStop(0.36, color);
-      gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
-      this.ctx.globalAlpha = 0.42 * fade + pulse * 0.2;
-      this.ctx.fillStyle = gradient;
-      this.ctx.beginPath();
-      this.ctx.arc(explosion.x, explosion.y, ringRadius, 0, Math.PI * 2);
-      this.ctx.fill();
-
-      this.ctx.strokeStyle = color;
-      this.ctx.globalAlpha = fade * 0.88;
-      this.ctx.lineWidth = 4 + pulse * 3;
-      this.ctx.beginPath();
-      this.ctx.arc(explosion.x, explosion.y, ringRadius * 0.72, 0, Math.PI * 2);
-      this.ctx.stroke();
-
-      for (let index = 0; index < this.config.RENDER.EXPLOSION_PARTICLE_COUNT; index += 1) {
-        const angle = seededAngle(explosion.id, index);
-        const distance =
-          this.config.RENDER.EXPLOSION_PARTICLE_DISTANCE * progress * (0.45 + ((index * 7) % 11) * 0.055);
-        const sparkLength = this.config.UI.HUD_GAP_PX * (0.7 + pulse * 1.2);
-        const x = explosion.x + Math.cos(angle) * distance;
-        const y = explosion.y + Math.sin(angle) * distance;
-        this.ctx.strokeStyle = index % 4 === 0 ? this.config.RENDER.COLORS.LASER_CORE : color;
-        this.ctx.globalAlpha = fade * (0.5 + (index % 3) * 0.15);
-        this.ctx.lineWidth = index % 5 === 0 ? 3 : 2;
-        this.drawLine(
-          { x, y },
-          {
-            x: x + Math.cos(angle) * sparkLength,
-            y: y + Math.sin(angle) * sparkLength
-          }
+      (explosion.sparks ?? []).forEach((spark, index) => {
+        const distance = this.config.RENDER.EXPLOSION_PARTICLE_DISTANCE * progress * spark.distanceScale;
+        const x = explosion.x + Math.cos(spark.angle) * distance;
+        const y = explosion.y + Math.sin(spark.angle) * distance;
+        const size = spark.size * (0.7 + pulse * 0.9);
+        this.drawTintedSprite(
+          index % 2 === 0 ? "bolt" : "muzzle",
+          color,
+          x,
+          y,
+          size,
+          size * 1.8,
+          spark.angle + spark.spin * progress,
+          fade * 0.5
         );
-      }
-
-      this.ctx.restore();
+      });
     });
+  }
+
+  drawTintedSprite(name, color, centerX, centerY, width, height, rotation = 0, alpha = 1) {
+    this.drawSprite(this.getTintedEffect(name, color), centerX, centerY, width, height, rotation, alpha, "lighter");
+  }
+
+  getTintedEffect(name, color) {
+    const image = this.effectImages[name];
+    if (!image?.complete || image.naturalWidth <= 0) {
+      return image;
+    }
+
+    const cacheKey = `${name}:${color}`;
+    if (this.tintedEffectCache.has(cacheKey)) {
+      return this.tintedEffectCache.get(cacheKey);
+    }
+
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    context.drawImage(image, 0, 0);
+    context.globalCompositeOperation = "source-atop";
+    context.fillStyle = color;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.globalCompositeOperation = "lighter";
+    context.globalAlpha = 0.55;
+    context.drawImage(image, 0, 0);
+    this.tintedEffectCache.set(cacheKey, canvas);
+    return canvas;
+  }
+
+  drawSprite(image, centerX, centerY, width, height, rotation = 0, alpha = 1, compositeOperation = "source-over") {
+    if (!image?.complete && !(image instanceof HTMLCanvasElement)) {
+      return;
+    }
+
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = compositeOperation;
+    this.ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    this.ctx.translate(centerX, centerY);
+    this.ctx.rotate(rotation);
+    this.ctx.drawImage(image, -width / 2, -height / 2, width, height);
+    this.ctx.restore();
   }
 
   drawTrail(trailState, nowMs) {
@@ -657,13 +696,9 @@ function toPoint(point) {
   return { x: point[0], y: point[1] };
 }
 
-function seededAngle(seed, index) {
-  let hash = 0;
-  const value = `${seed}-${index}`;
-
-  for (let characterIndex = 0; characterIndex < value.length; characterIndex += 1) {
-    hash = (hash * 31 + value.charCodeAt(characterIndex)) >>> 0;
-  }
-
-  return ((hash % 6283) / 1000) % (Math.PI * 2);
+function drawLineOn(context, from, to) {
+  context.beginPath();
+  context.moveTo(from.x, from.y);
+  context.lineTo(to.x, to.y);
+  context.stroke();
 }

@@ -20,7 +20,13 @@ const PUBLIC_ASSET_PATHS = {
   strike: `${PUBLIC_ASSET_BASE}audio/dragon-strike.ogg`,
   burst: `${PUBLIC_ASSET_BASE}audio/ship-burst.ogg`,
   click: `${PUBLIC_ASSET_BASE}audio/ui-click.ogg`,
-  runEnd: `${PUBLIC_ASSET_BASE}audio/run-end.ogg`
+  runEnd: `${PUBLIC_ASSET_BASE}audio/run-end.ogg`,
+  effectMuzzle: `${PUBLIC_ASSET_BASE}effects/muzzle.png`,
+  effectMagicRing: `${PUBLIC_ASSET_BASE}effects/magic-ring.png`,
+  effectBolt: `${PUBLIC_ASSET_BASE}effects/bolt.png`,
+  effectExplosion1: `${PUBLIC_ASSET_BASE}effects/explosion-1.png`,
+  effectExplosion2: `${PUBLIC_ASSET_BASE}effects/explosion-2.png`,
+  effectExplosion3: `${PUBLIC_ASSET_BASE}effects/explosion-3.png`
 };
 
 export const GAME_CONFIG = {
@@ -286,6 +292,16 @@ export const GAME_CONFIG = {
     SHIP_GLYPH_ANIMATION_MS: 1600,
     SHIP_GLYPH_REST_MS: 500,
     DRAGON_IMAGE_PATHS,
+    EFFECT_IMAGE_PATHS: {
+      muzzle: PUBLIC_ASSET_PATHS.effectMuzzle,
+      magicRing: PUBLIC_ASSET_PATHS.effectMagicRing,
+      bolt: PUBLIC_ASSET_PATHS.effectBolt,
+      explosionFrames: [
+        PUBLIC_ASSET_PATHS.effectExplosion1,
+        PUBLIC_ASSET_PATHS.effectExplosion2,
+        PUBLIC_ASSET_PATHS.effectExplosion3
+      ]
+    },
     DRAGON_IMAGE_SIZE: 46,
     DRAGON_SELECTION_IMAGE_SIZE: 32,
     DRAGON_IDLE_BOB_PX: 3,

@@ -61,6 +61,7 @@ export function applyGlyphStrike(state, gesture, nowMs, config = GAME_CONFIG) {
         x: target.x,
         y: target.y,
         color: config.ELEMENTS[gesture.name].color,
+        sparks: createExplosionSparks(`${target.id}-${nowMs}`, config.RENDER.EXPLOSION_PARTICLE_COUNT),
         createdAtMs: nowMs,
         expiresAtMs: nowMs + config.RENDER.EXPLOSION_DURATION_MS
       }
@@ -80,4 +81,28 @@ export function pruneTransientState(state, nowMs) {
     explosions: (state.explosions ?? []).filter((explosion) => explosion.expiresAtMs > nowMs),
     feedback: state.feedback?.untilMs > nowMs ? state.feedback : null
   };
+}
+
+function createExplosionSparks(seed, configuredCount) {
+  const count = Math.min(8, Math.max(4, Math.round(configuredCount / 4)));
+
+  return Array.from({ length: count }, (_, index) => {
+    const hash = hashValue(`${seed}-${index}`);
+    return {
+      angle: ((hash % 6283) / 1000) % (Math.PI * 2),
+      distanceScale: 0.55 + ((hash >>> 4) % 45) / 100,
+      size: 9 + ((hash >>> 9) % 7),
+      spin: ((hash >>> 13) % 2 === 0 ? -1 : 1) * (0.4 + ((hash >>> 16) % 40) / 100)
+    };
+  });
+}
+
+function hashValue(value) {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+
+  return hash;
 }
