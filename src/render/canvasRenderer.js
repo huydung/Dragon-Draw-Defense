@@ -29,6 +29,7 @@ export class CanvasRenderer {
     this.drawDragons(state.activeElements, state.lasers, nowMs);
     this.drawShips(state.ships, nowMs);
     this.drawLasers(state.lasers, nowMs);
+    this.drawExplosions(state.explosions, nowMs);
     this.drawTrail(trailState, nowMs);
     this.drawWaveSelectionDialog(state, nowMs);
     this.renderFeedback(state.feedback);
@@ -216,6 +217,7 @@ export class CanvasRenderer {
       this.ctx.translate(drawX, drawY);
       this.ctx.rotate(rotation);
       this.ctx.scale(scale, scale);
+      this.drawDragonAttackAura(element.color, attackPulse);
       this.drawDragonPortrait(name, 0, 0, this.config.RENDER.DRAGON_IMAGE_SIZE, element.color);
       this.ctx.restore();
 
@@ -450,17 +452,44 @@ export class CanvasRenderer {
       this.ctx.globalCompositeOperation = "lighter";
       this.ctx.lineCap = "round";
       this.ctx.strokeStyle = color;
-      this.ctx.globalAlpha = 0.18 + pulse * 0.24;
+      this.ctx.shadowColor = color;
+      this.ctx.shadowBlur = 18 + pulse * 18;
+      this.ctx.globalAlpha = 0.18 + pulse * 0.36;
       this.ctx.lineWidth = this.config.RENDER.LASER_GLOW_WIDTH + pulse * this.config.UI.HUD_GAP_PX;
       this.drawLine(laser.from, laser.to);
-      this.ctx.strokeStyle = this.config.RENDER.COLORS.LASER_CORE;
-      this.ctx.globalAlpha = 0.88;
+      this.ctx.strokeStyle = color;
+      this.ctx.globalAlpha = 0.72;
       this.ctx.lineWidth = this.config.RENDER.LASER_WIDTH + pulse * this.config.RENDER.CANVAS_BORDER_WIDTH * 3;
+      this.drawLine(laser.from, laser.to);
+      this.ctx.strokeStyle = this.config.RENDER.COLORS.LASER_CORE;
+      this.ctx.globalAlpha = 0.92;
+      this.ctx.lineWidth = Math.max(2, this.config.RENDER.LASER_WIDTH * 0.45 + pulse * 2);
       this.drawLine(laser.from, laser.to);
       this.drawMuzzleFlash(laser.from, color, pulse);
       this.drawImpactBurst(laser, progress, pulse, color);
       this.ctx.restore();
     });
+  }
+
+  drawDragonAttackAura(color, pulse) {
+    if (pulse <= 0) {
+      return;
+    }
+
+    const radius = this.config.RENDER.DRAGON_ATTACK_AURA_RADIUS * (0.7 + pulse * 0.45);
+    const gradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+    gradient.addColorStop(0, this.config.RENDER.COLORS.LASER_CORE);
+    gradient.addColorStop(0.35, color);
+    gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = "lighter";
+    this.ctx.globalAlpha = 0.18 + pulse * 0.38;
+    this.ctx.fillStyle = gradient;
+    this.ctx.beginPath();
+    this.ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.restore();
   }
 
   drawDragonPortrait(name, centerX, centerY, size) {
@@ -521,6 +550,62 @@ export class CanvasRenderer {
         }
       );
     }
+  }
+
+  drawExplosions(explosions = [], nowMs) {
+    explosions.forEach((explosion) => {
+      const ageMs = nowMs - explosion.createdAtMs;
+      const progress = Math.max(0, Math.min(1, ageMs / this.config.RENDER.EXPLOSION_DURATION_MS));
+      const pulse = Math.sin(progress * Math.PI);
+      const fade = Math.max(0, 1 - progress);
+      const color = explosion.color ?? this.config.RENDER.COLORS.LASER_CORE;
+      const ringRadius = this.config.RENDER.EXPLOSION_RING_RADIUS * (0.22 + progress);
+
+      this.ctx.save();
+      this.ctx.globalCompositeOperation = "lighter";
+      this.ctx.lineCap = "round";
+      this.ctx.lineJoin = "round";
+      this.ctx.shadowColor = color;
+      this.ctx.shadowBlur = 20 * fade + 10;
+
+      const gradient = this.ctx.createRadialGradient(explosion.x, explosion.y, 0, explosion.x, explosion.y, ringRadius);
+      gradient.addColorStop(0, this.config.RENDER.COLORS.LASER_CORE);
+      gradient.addColorStop(0.36, color);
+      gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+      this.ctx.globalAlpha = 0.42 * fade + pulse * 0.2;
+      this.ctx.fillStyle = gradient;
+      this.ctx.beginPath();
+      this.ctx.arc(explosion.x, explosion.y, ringRadius, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      this.ctx.strokeStyle = color;
+      this.ctx.globalAlpha = fade * 0.88;
+      this.ctx.lineWidth = 4 + pulse * 3;
+      this.ctx.beginPath();
+      this.ctx.arc(explosion.x, explosion.y, ringRadius * 0.72, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      for (let index = 0; index < this.config.RENDER.EXPLOSION_PARTICLE_COUNT; index += 1) {
+        const angle = seededAngle(explosion.id, index);
+        const distance =
+          this.config.RENDER.EXPLOSION_PARTICLE_DISTANCE * progress * (0.45 + ((index * 7) % 11) * 0.055);
+        const sparkLength = this.config.UI.HUD_GAP_PX * (0.7 + pulse * 1.2);
+        const x = explosion.x + Math.cos(angle) * distance;
+        const y = explosion.y + Math.sin(angle) * distance;
+        this.ctx.strokeStyle = index % 4 === 0 ? this.config.RENDER.COLORS.LASER_CORE : color;
+        this.ctx.globalAlpha = fade * (0.5 + (index % 3) * 0.15);
+        this.ctx.lineWidth = index % 5 === 0 ? 3 : 2;
+        this.drawLine(
+          { x, y },
+          {
+            x: x + Math.cos(angle) * sparkLength,
+            y: y + Math.sin(angle) * sparkLength
+          }
+        );
+      }
+
+      this.ctx.restore();
+    });
   }
 
   drawTrail(trailState, nowMs) {

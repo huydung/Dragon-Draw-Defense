@@ -1,16 +1,27 @@
 import { describe, expect, test, vi } from "vitest";
 import { GAME_CONFIG } from "../config.js";
-import { advanceGameState, createInitialGameState, getWaveShipCount, restartGame } from "./gameLoop.js";
+import { advanceGameState, createInitialGameState, getWaveShipCount, getWaveSpawnInterval, restartGame } from "./gameLoop.js";
 import { createSeededRandom } from "./waveElements.js";
 
 describe("Milestone 3 wave survival loop", () => {
   test("wave ship counts follow configured progression", () => {
     expect(getWaveShipCount(1)).toBe(5);
     expect(getWaveShipCount(2)).toBe(8);
-    expect(getWaveShipCount(3)).toBe(12);
+    expect(getWaveShipCount(3)).toBe(11);
     expect(getWaveShipCount(5)).toBe(
-      GAME_CONFIG.WAVES.WAVE_3_SHIP_COUNT + (5 - 3) * GAME_CONFIG.WAVES.WAVE_AFTER_3_SHIP_INCREMENT
+      GAME_CONFIG.WAVES.BASE_SHIP_COUNT + (5 - 1) * GAME_CONFIG.WAVES.SHIP_COUNT_INCREMENT
     );
+  });
+
+  test("spawn intervals tighten with wave number until the configured floors", () => {
+    const waveOne = getWaveSpawnInterval(1);
+    const waveFive = getWaveSpawnInterval(5);
+    const lateWave = getWaveSpawnInterval(30);
+
+    expect(waveFive.min).toBeLessThan(waveOne.min);
+    expect(waveFive.max).toBeLessThan(waveOne.max);
+    expect(lateWave.min).toBe(GAME_CONFIG.WAVES.MIN_SPAWN_INTERVAL_FLOOR_MS);
+    expect(lateWave.max).toBe(GAME_CONFIG.WAVES.MAX_SPAWN_INTERVAL_FLOOR_MS);
   });
 
   test("starts with a transition banner phase before spawning", () => {
@@ -78,6 +89,31 @@ describe("Milestone 3 wave survival loop", () => {
     expect(state.health).toBe(GAME_CONFIG.HEALTH.INITIAL_HEALTH);
     expect(state.gameOver).toBe(false);
     expect(state.phase).toBe("transition");
+    logSpy.mockRestore();
+  });
+
+  test("waits on a cleared phase before showing the next roster selection", () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const rng = createSeededRandom(6);
+    const clearedState = {
+      ...createInitialGameState(GAME_CONFIG, rng, 0),
+      phase: "active",
+      wave: 1,
+      ships: [{ id: "cleared", x: 300, y: 100, weakness: "Fire", active: false }],
+      spawnedShipCount: 1,
+      resolvedShipCount: 1,
+      waveShipCount: 1,
+      lastUpdateMs: 0
+    };
+
+    const vfxState = advanceGameState(clearedState, 100, rng);
+    expect(vfxState.phase).toBe("cleared");
+    expect(vfxState.wave).toBe(1);
+    expect(vfxState.waveClearedUntilMs).toBe(100 + GAME_CONFIG.WAVES.WAVE_CLEAR_VFX_DELAY_MS);
+
+    const nextWave = advanceGameState(vfxState, vfxState.waveClearedUntilMs, rng);
+    expect(nextWave.phase).toBe("transition");
+    expect(nextWave.wave).toBe(2);
     logSpy.mockRestore();
   });
 });

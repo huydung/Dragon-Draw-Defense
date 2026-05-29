@@ -54,6 +54,17 @@ export function applyGlyphStrike(state, gesture, nowMs, config = GAME_CONFIG) {
         expiresAtMs: nowMs + config.RENDER.LASER_DURATION_MS
       }
     ],
+    explosions: [
+      ...(state.explosions ?? []),
+      {
+        id: `${target.id}-explosion-${nowMs}`,
+        x: target.x,
+        y: target.y,
+        color: config.ELEMENTS[gesture.name].color,
+        createdAtMs: nowMs,
+        expiresAtMs: nowMs + config.RENDER.EXPLOSION_DURATION_MS
+      }
+    ],
     feedback: {
       kind: "hit",
       text: `${gesture.name} strike +${scoreGain}`,
@@ -66,6 +77,7 @@ export function pruneTransientState(state, nowMs) {
   return {
     ...state,
     lasers: state.lasers.filter((laser) => laser.expiresAtMs > nowMs),
+    explosions: (state.explosions ?? []).filter((explosion) => explosion.expiresAtMs > nowMs),
     feedback: state.feedback?.untilMs > nowMs ? state.feedback : null
   };
 }

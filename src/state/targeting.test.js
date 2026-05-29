@@ -37,6 +37,8 @@ describe("Viking Raid Sentry targeting", () => {
     expect(nextState.ships.find((ship) => ship.id === "ship-fire-close").active).toBe(false);
     expect(nextState.ships.find((ship) => ship.id === "ship-fire-far").active).toBe(true);
     expect(nextState.lasers).toHaveLength(1);
+    expect(nextState.explosions).toHaveLength(1);
+    expect(nextState.explosions[0].color).toBe(GAME_CONFIG.ELEMENTS.Fire.color);
     logSpy.mockRestore();
   });
 

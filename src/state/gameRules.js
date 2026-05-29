@@ -6,17 +6,7 @@ export function calculateScore(wave, hasPrecisionBonus, config = GAME_CONFIG) {
 }
 
 export function calculateShipSpeed(wave, config = GAME_CONFIG) {
-  if (wave === 1) {
-    return config.WAVES.BASE_SHIP_SPEED;
-  }
-
-  const waveTwoSpeed = config.WAVES.BASE_SHIP_SPEED * (1 + config.WAVES.WAVE_2_SPEED_MULTIPLIER);
-
-  if (wave === 2) {
-    return waveTwoSpeed;
-  }
-
-  return waveTwoSpeed * (1 + config.WAVES.WAVE_SCALING_MULTIPLIER) ** (wave - 2);
+  return config.WAVES.BASE_SHIP_SPEED * (1 + config.WAVES.SPEED_GROWTH_MULTIPLIER) ** (wave - 1);
 }
 
 export function handleShipBreach(state, config = GAME_CONFIG) {

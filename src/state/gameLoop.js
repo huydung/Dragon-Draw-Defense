@@ -9,6 +9,7 @@ export function createInitialGameState(config = GAME_CONFIG, rng = Math.random, 
       score: 0,
       defeatedShipCount: 0,
       lasers: [],
+      explosions: [],
       feedback: null,
       gameOver: false
     },
@@ -47,8 +48,16 @@ export function advanceGameState(state, nowMs, rng = Math.random, config = GAME_
     nextState = applyBreaches(nextState, nowMs, config);
 
     if (!nextState.gameOver && isWaveCleared(nextState)) {
-      nextState = createWaveState(nextState, nextState.wave + 1, nowMs, rng, config);
+      nextState = {
+        ...nextState,
+        phase: "cleared",
+        waveClearedUntilMs: nowMs + config.WAVES.WAVE_CLEAR_VFX_DELAY_MS
+      };
     }
+  }
+
+  if (nextState.phase === "cleared" && nowMs >= nextState.waveClearedUntilMs) {
+    nextState = createWaveState(nextState, nextState.wave + 1, nowMs, rng, config);
   }
 
   return {
@@ -62,21 +71,22 @@ export function restartGame(nowMs, rng = Math.random, config = GAME_CONFIG) {
 }
 
 export function getWaveShipCount(wave, config = GAME_CONFIG) {
-  if (wave === 1) {
-    return config.WAVES.WAVE_1_SHIP_COUNT;
-  }
+  return config.WAVES.BASE_SHIP_COUNT + (wave - 1) * config.WAVES.SHIP_COUNT_INCREMENT;
+}
 
-  if (wave === 2) {
-    return config.WAVES.WAVE_2_SHIP_COUNT;
-  }
-
-  return config.WAVES.WAVE_3_SHIP_COUNT + (wave - 3) * config.WAVES.WAVE_AFTER_3_SHIP_INCREMENT;
+export function getWaveSpawnInterval(wave, config = GAME_CONFIG) {
+  const intervalScale = config.WAVES.SPAWN_INTERVAL_DECAY ** (wave - 1);
+  return {
+    min: Math.max(config.WAVES.MIN_SPAWN_INTERVAL_FLOOR_MS, config.WAVES.BASE_MIN_SPAWN_INTERVAL_MS * intervalScale),
+    max: Math.max(config.WAVES.MAX_SPAWN_INTERVAL_FLOOR_MS, config.WAVES.BASE_MAX_SPAWN_INTERVAL_MS * intervalScale)
+  };
 }
 
 function createWaveState(baseState, wave, nowMs, rng, config) {
   const activeElements = selectWaveElements(wave, rng, config);
   const shipCount = getWaveShipCount(wave, config);
   const shipSpeed = calculateShipSpeed(wave, config);
+  const spawnInterval = getWaveSpawnInterval(wave, config);
 
   console.log(`[STATE:SPAWN] Wave ${wave} queued with ${shipCount} ships.`);
 
@@ -90,7 +100,9 @@ function createWaveState(baseState, wave, nowMs, rng, config) {
     resolvedShipCount: 0,
     waveShipCount: shipCount,
     shipSpeed,
+    spawnInterval,
     transitionUntilMs: nowMs + config.WAVES.WAVE_TRANSITION_DELAY_MS,
+    waveClearedUntilMs: 0,
     nextSpawnAtMs: nowMs + config.WAVES.WAVE_TRANSITION_DELAY_MS,
     damageFlashUntilMs: baseState.damageFlashUntilMs ?? 0,
     lastUpdateMs: nowMs
@@ -121,7 +133,7 @@ function spawnDueShips(state, nowMs, rng, config) {
       ...nextState,
       spawnedShipCount: shipNumber,
       ships: [...nextState.ships, ship],
-      nextSpawnAtMs: nowMs + randomBetween(config.WAVES.MIN_SPAWN_INTERVAL_MS, config.WAVES.MAX_SPAWN_INTERVAL_MS, rng)
+      nextSpawnAtMs: nowMs + randomBetween(nextState.spawnInterval.min, nextState.spawnInterval.max, rng)
     };
   }
 

@@ -9,8 +9,8 @@ describe("Viking Raid Sentry core rules", () => {
   });
 
   test("speed math escalates predictably according to configured multipliers", () => {
-    const waveTwoSpeed = GAME_CONFIG.WAVES.BASE_SHIP_SPEED * (1 + GAME_CONFIG.WAVES.WAVE_2_SPEED_MULTIPLIER);
-    const waveThreeSpeed = waveTwoSpeed * (1 + GAME_CONFIG.WAVES.WAVE_SCALING_MULTIPLIER);
+    const waveTwoSpeed = GAME_CONFIG.WAVES.BASE_SHIP_SPEED * (1 + GAME_CONFIG.WAVES.SPEED_GROWTH_MULTIPLIER);
+    const waveThreeSpeed = GAME_CONFIG.WAVES.BASE_SHIP_SPEED * (1 + GAME_CONFIG.WAVES.SPEED_GROWTH_MULTIPLIER) ** 2;
 
     expect(calculateShipSpeed(1)).toBeCloseTo(40);
     expect(calculateShipSpeed(2)).toBeCloseTo(waveTwoSpeed);
