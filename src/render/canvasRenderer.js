@@ -30,7 +30,7 @@ export class CanvasRenderer {
     this.drawBackground();
     this.drawDamageFlash(state, nowMs);
     this.drawDragons(state.activeElements, state.lasers, nowMs, state.islandHitCount ?? 0);
-    this.drawIslandFires(state.islandHitCount ?? 0, nowMs);
+    this.drawIslandFires(state.islandFires ?? [], nowMs);
     this.drawShips(state.ships, nowMs);
     this.drawLasers(state.lasers, nowMs);
     this.drawExplosions(state.explosions, nowMs);
@@ -311,17 +311,13 @@ export class CanvasRenderer {
     this.ctx.restore();
   }
 
-  drawIslandFires(islandHitCount, nowMs) {
-    const fireCount = getIslandFireCount(islandHitCount);
-    const positions = getIslandFirePositions();
-
-    for (let index = 0; index < fireCount; index += 1) {
-      const position = positions[index % positions.length];
+  drawIslandFires(islandFires, nowMs) {
+    islandFires.forEach((position, index) => {
       const cycle = Math.sin(nowMs * 0.008 + index * 1.43) * 0.12;
       const size = position.size * (1 + cycle);
-      const image = index % 2 === 0 ? this.habitatImages.fire1 : this.habitatImages.fire2;
+      const image = position.variantIndex % 2 === 0 ? this.habitatImages.fire1 : this.habitatImages.fire2;
       this.drawSprite(image, position.x, position.y, size * 0.58, size, position.rotation, 0.92);
-    }
+    });
   }
 
   drawDragons(activeElements = [], lasers = [], nowMs = 0, islandHitCount = 0) {
@@ -770,29 +766,6 @@ export class CanvasRenderer {
 
 function toPoint(point) {
   return { x: point[0], y: point[1] };
-}
-
-const ISLAND_FIRE_POSITIONS = [
-  { x: 124, y: 132, size: 48, rotation: -0.12 },
-  { x: 96, y: 88, size: 40, rotation: 0.16 },
-  { x: 22, y: 206, size: 48, rotation: -0.08 },
-  { x: 126, y: 226, size: 44, rotation: 0.18 },
-  { x: 96, y: 278, size: 52, rotation: -0.16 },
-  { x: 24, y: 322, size: 44, rotation: 0.1 },
-  { x: 118, y: 348, size: 46, rotation: -0.2 },
-  { x: 74, y: 394, size: 50, rotation: 0.12 },
-  { x: 18, y: 428, size: 42, rotation: -0.1 },
-  { x: 128, y: 414, size: 52, rotation: 0.2 },
-  { x: 42, y: 150, size: 40, rotation: -0.16 },
-  { x: 38, y: 364, size: 45, rotation: 0.14 }
-];
-
-function getIslandFireCount(islandHitCount) {
-  return Math.min(ISLAND_FIRE_POSITIONS.length, islandHitCount * (islandHitCount + 1));
-}
-
-function getIslandFirePositions() {
-  return ISLAND_FIRE_POSITIONS;
 }
 
 function drawLineOn(context, from, to) {

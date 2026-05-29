@@ -9,6 +9,7 @@ export function createInitialGameState(config = GAME_CONFIG, rng = Math.random, 
       score: 0,
       defeatedShipCount: 0,
       islandHitCount: 0,
+      islandFires: [],
       lasers: [],
       explosions: [],
       feedback: null,
@@ -46,7 +47,7 @@ export function advanceGameState(state, nowMs, rng = Math.random, config = GAME_
   if (nextState.phase === "active") {
     nextState = spawnDueShips(nextState, nowMs, rng, config);
     nextState = moveShips(nextState, elapsedSeconds);
-    nextState = applyBreaches(nextState, nowMs, config);
+    nextState = applyBreaches(nextState, nowMs, config, rng);
 
     if (!nextState.gameOver && isWaveCleared(nextState)) {
       nextState = {
@@ -155,7 +156,7 @@ function moveShips(state, elapsedSeconds) {
   };
 }
 
-function applyBreaches(state, nowMs, config) {
+function applyBreaches(state, nowMs, config, rng) {
   let nextState = state;
   const breachedShipIds = state.ships
     .filter((ship) => ship.active && ship.x <= config.PLAYFIELD.DAMAGE_PERIMETER_X)
@@ -167,9 +168,11 @@ function applyBreaches(state, nowMs, config) {
     }
 
     nextState = handleShipBreach(nextState, config);
+    const islandHitCount = (nextState.islandHitCount ?? 0) + 1;
     nextState = {
       ...nextState,
-      islandHitCount: (nextState.islandHitCount ?? 0) + 1,
+      islandHitCount,
+      islandFires: [...(nextState.islandFires ?? []), ...createIslandFires(islandHitCount, rng)],
       resolvedShipCount: nextState.resolvedShipCount + 1,
       damageFlashUntilMs: nowMs + config.RENDER.DAMAGE_FLASH_DURATION_MS,
       gameOverDialogAtMs: nextState.gameOver ? nowMs + config.RENDER.GAME_OVER_REVEAL_DELAY_MS : 0,
@@ -186,4 +189,15 @@ function isWaveCleared(state) {
 
 function randomBetween(min, max, rng) {
   return min + (max - min) * rng();
+}
+
+function createIslandFires(islandHitCount, rng) {
+  const fireCount = islandHitCount * 2;
+  return Array.from({ length: fireCount }, (_, index) => ({
+    x: randomBetween(14, 132, rng),
+    y: randomBetween(72, 432, rng),
+    size: randomBetween(38, 56, rng),
+    rotation: randomBetween(-0.22, 0.22, rng),
+    variantIndex: index % 2
+  }));
 }
