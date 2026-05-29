@@ -8,6 +8,7 @@ export function createInitialGameState(config = GAME_CONFIG, rng = Math.random, 
       health: config.HEALTH.INITIAL_HEALTH,
       score: 0,
       defeatedShipCount: 0,
+      islandHitCount: 0,
       lasers: [],
       explosions: [],
       feedback: null,
@@ -161,9 +162,14 @@ function applyBreaches(state, nowMs, config) {
     .map((ship) => ship.id);
 
   for (const shipId of breachedShipIds) {
+    if (nextState.gameOver) {
+      break;
+    }
+
     nextState = handleShipBreach(nextState, config);
     nextState = {
       ...nextState,
+      islandHitCount: (nextState.islandHitCount ?? 0) + 1,
       resolvedShipCount: nextState.resolvedShipCount + 1,
       damageFlashUntilMs: nowMs + config.RENDER.DAMAGE_FLASH_DURATION_MS,
       ships: nextState.ships.map((ship) => (ship.id === shipId ? { ...ship, active: false, breached: true } : ship))

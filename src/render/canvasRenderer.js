@@ -29,8 +29,8 @@ export class CanvasRenderer {
     this.clear();
     this.drawBackground();
     this.drawDamageFlash(state, nowMs);
-    this.drawDefenseLine();
-    this.drawDragons(state.activeElements, state.lasers, nowMs);
+    this.drawDragons(state.activeElements, state.lasers, nowMs, state.islandHitCount ?? 0);
+    this.drawIslandFires(state.islandHitCount ?? 0, nowMs);
     this.drawShips(state.ships, nowMs);
     this.drawLasers(state.lasers, nowMs);
     this.drawExplosions(state.explosions, nowMs);
@@ -247,32 +247,25 @@ export class CanvasRenderer {
     context.globalAlpha = 0.88;
     context.fillStyle = "#f2d996";
     context.beginPath();
-    context.moveTo(0, top + 36);
-    context.bezierCurveTo(34, top + 12, 74, top + 28, perimeterX + 14, top + 6);
-    context.lineTo(perimeterX + 18, height);
+    context.moveTo(0, top + 16);
+    context.bezierCurveTo(38, top + 1, 88, top + 16, perimeterX + 26, top + 4);
+    context.lineTo(perimeterX + 30, height);
     context.lineTo(0, height);
     context.closePath();
     context.fill();
 
     context.fillStyle = "#40b969";
     context.beginPath();
-    context.moveTo(0, top + 88);
-    context.bezierCurveTo(32, top + 64, 75, top + 92, perimeterX + 12, top + 68);
-    context.lineTo(perimeterX + 15, height);
+    context.moveTo(0, top + 40);
+    context.bezierCurveTo(38, top + 26, 84, top + 40, perimeterX + 22, top + 30);
+    context.lineTo(perimeterX + 27, height);
     context.lineTo(0, height);
     context.closePath();
     context.fill();
 
-    context.strokeStyle = "rgba(255, 251, 214, 0.68)";
-    context.lineWidth = 5;
-    context.beginPath();
-    context.moveTo(perimeterX + 11, top + 8);
-    context.bezierCurveTo(82, top + 88, 122, top + 230, perimeterX + 18, height);
-    context.stroke();
-
-    this.drawImageOn(context, this.habitatImages.house, 7, top + 30, 58, 38, 0.72);
-    this.drawImageOn(context, this.habitatImages.palm, 8, height - 138, 58, 69, 0.64);
-    this.drawImageOn(context, this.habitatImages.tree, 74, height - 112, 28, 60, 0.72);
+    this.drawImageOn(context, this.habitatImages.house, 7, top + 22, 58, 38, 0.72);
+    this.drawImageOn(context, this.habitatImages.palm, 8, height - 138, 58, 69, 0.55);
+    this.drawImageOn(context, this.habitatImages.tree, 82, height - 115, 28, 60, 0.64);
     context.restore();
   }
 
@@ -285,19 +278,6 @@ export class CanvasRenderer {
     context.globalAlpha *= alpha;
     context.drawImage(image, x, y, width, height);
     context.restore();
-  }
-
-  drawDefenseLine() {
-    this.ctx.save();
-    this.ctx.strokeStyle = this.config.RENDER.COLORS.DEFENSE_LINE;
-    this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH + this.config.RENDER.CANVAS_BORDER_WIDTH;
-    this.ctx.setLineDash(this.config.RENDER.DEFENSE_LINE_DASH);
-    this.drawLine(
-      { x: this.config.PLAYFIELD.DAMAGE_PERIMETER_X, y: this.config.PLAYFIELD.SAFE_TOP_PADDING },
-      { x: this.config.PLAYFIELD.DAMAGE_PERIMETER_X, y: this.config.PLAYFIELD.VIRTUAL_HEIGHT }
-    );
-    this.ctx.setLineDash([]);
-    this.ctx.restore();
   }
 
   drawDamageFlash(state, nowMs) {
@@ -330,7 +310,21 @@ export class CanvasRenderer {
     this.ctx.restore();
   }
 
-  drawDragons(activeElements = [], lasers = [], nowMs = 0) {
+  drawIslandFires(islandHitCount, nowMs) {
+    const fireCount = getIslandFireCount(islandHitCount);
+    const positions = getIslandFirePositions();
+
+    for (let index = 0; index < fireCount; index += 1) {
+      const position = positions[index % positions.length];
+      const cycle = Math.sin(nowMs * 0.008 + index * 1.43) * 0.12;
+      const size = position.size * (1 + cycle);
+      const image = index % 2 === 0 ? this.habitatImages.fire1 : this.habitatImages.fire2;
+      this.drawSprite(image, position.x, position.y, size * 0.58, size, position.rotation, 0.92);
+    }
+  }
+
+  drawDragons(activeElements = [], lasers = [], nowMs = 0, islandHitCount = 0) {
+    const dragonsDefeated = islandHitCount >= this.config.HEALTH.INITIAL_HEALTH;
     activeElements.forEach((name, index) => {
       const element = this.config.ELEMENTS[name];
       const position = this.config.PLAYFIELD.ACTIVE_DRAGON_POSITIONS[index];
@@ -339,13 +333,13 @@ export class CanvasRenderer {
         return;
       }
 
-      const idle = this.getDragonIdleMotion(index, nowMs);
+      const idle = this.getDragonIdleMotion(index, nowMs, islandHitCount);
       const attack = this.getDragonAttackMotion(position, lasers, nowMs);
       const attackPulse = attack?.pulse ?? 0;
       const drawX = position.x + idle.x + attackPulse * this.config.RENDER.DRAGON_ATTACK_LUNGE_PX;
       const drawY = position.y + idle.y - attackPulse * this.config.RENDER.DRAGON_ATTACK_LIFT_PX;
       const scale = 1 + attackPulse * this.config.RENDER.DRAGON_ATTACK_SCALE;
-      const rotation = idle.rotation + attackPulse * 0.12;
+      const rotation = dragonsDefeated ? Math.PI / 2 + Math.sin(nowMs * 0.01 + index) * 0.16 : idle.rotation + attackPulse * 0.12;
 
       this.ctx.save();
       this.ctx.translate(drawX, drawY);
@@ -357,7 +351,7 @@ export class CanvasRenderer {
 
       this.ctx.save();
       this.ctx.font = `${this.config.UI.PANEL_RADIUS_PX + this.config.RENDER.CANVAS_BORDER_WIDTH}px ${this.config.UI.FONT_FAMILY}`;
-      this.ctx.fillStyle = this.config.RENDER.COLORS.MUTED_TEXT;
+      this.ctx.fillStyle = "#111827";
       this.ctx.textAlign = "center";
       this.ctx.textBaseline = "middle";
       this.ctx.fillText(
@@ -369,12 +363,13 @@ export class CanvasRenderer {
     });
   }
 
-  getDragonIdleMotion(index, nowMs) {
-    const phase = nowMs * 0.0024 + index * 1.37;
+  getDragonIdleMotion(index, nowMs, islandHitCount = 0) {
+    const urgency = islandHitCount >= 2 ? 2.2 : 1;
+    const phase = nowMs * 0.0024 * urgency + index * 1.37;
     return {
-      x: Math.sin(phase * 0.8) * 1.2,
-      y: Math.sin(phase) * this.config.RENDER.DRAGON_IDLE_BOB_PX,
-      rotation: Math.sin(phase * 0.7) * this.config.RENDER.DRAGON_IDLE_SWAY_RADIANS
+      x: Math.sin(phase * 0.8) * 1.2 * urgency,
+      y: Math.sin(phase) * this.config.RENDER.DRAGON_IDLE_BOB_PX * urgency,
+      rotation: Math.sin(phase * 0.7) * this.config.RENDER.DRAGON_IDLE_SWAY_RADIANS * urgency
     };
   }
 
@@ -774,6 +769,29 @@ export class CanvasRenderer {
 
 function toPoint(point) {
   return { x: point[0], y: point[1] };
+}
+
+const ISLAND_FIRE_POSITIONS = [
+  { x: 124, y: 132, size: 48, rotation: -0.12 },
+  { x: 96, y: 88, size: 40, rotation: 0.16 },
+  { x: 22, y: 206, size: 48, rotation: -0.08 },
+  { x: 126, y: 226, size: 44, rotation: 0.18 },
+  { x: 96, y: 278, size: 52, rotation: -0.16 },
+  { x: 24, y: 322, size: 44, rotation: 0.1 },
+  { x: 118, y: 348, size: 46, rotation: -0.2 },
+  { x: 74, y: 394, size: 50, rotation: 0.12 },
+  { x: 18, y: 428, size: 42, rotation: -0.1 },
+  { x: 128, y: 414, size: 52, rotation: 0.2 },
+  { x: 42, y: 150, size: 40, rotation: -0.16 },
+  { x: 38, y: 364, size: 45, rotation: 0.14 }
+];
+
+function getIslandFireCount(islandHitCount) {
+  return Math.min(ISLAND_FIRE_POSITIONS.length, islandHitCount * (islandHitCount + 1));
+}
+
+function getIslandFirePositions() {
+  return ISLAND_FIRE_POSITIONS;
 }
 
 function drawLineOn(context, from, to) {

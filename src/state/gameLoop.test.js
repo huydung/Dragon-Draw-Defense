@@ -75,6 +75,44 @@ describe("Milestone 3 wave survival loop", () => {
 
     expect(nextState.health).toBe(0);
     expect(nextState.gameOver).toBe(true);
+    expect(nextState.islandHitCount).toBe(1);
+    expect(nextState.resolvedShipCount).toBe(1);
+    logSpy.mockRestore();
+  });
+
+  test("breaches stop resolving once the island is defeated", () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const state = {
+      ...createInitialGameState(GAME_CONFIG, createSeededRandom(7), 0),
+      phase: "active",
+      health: 1,
+      ships: [
+        {
+          id: "first-breach",
+          x: GAME_CONFIG.PLAYFIELD.DAMAGE_PERIMETER_X,
+          y: GAME_CONFIG.PLAYFIELD.SHIP_MIN_Y,
+          weakness: "Fire",
+          speed: GAME_CONFIG.WAVES.BASE_SHIP_SPEED,
+          active: true
+        },
+        {
+          id: "extra-breach",
+          x: GAME_CONFIG.PLAYFIELD.DAMAGE_PERIMETER_X,
+          y: GAME_CONFIG.PLAYFIELD.SHIP_MIN_Y,
+          weakness: "Water",
+          speed: GAME_CONFIG.WAVES.BASE_SHIP_SPEED,
+          active: true
+        }
+      ],
+      spawnedShipCount: 2,
+      resolvedShipCount: 0,
+      waveShipCount: 2
+    };
+    const nextState = advanceGameState(state, 100, createSeededRandom(8));
+
+    expect(nextState.health).toBe(0);
+    expect(nextState.gameOver).toBe(true);
+    expect(nextState.islandHitCount).toBe(1);
     expect(nextState.resolvedShipCount).toBe(1);
     logSpy.mockRestore();
   });
