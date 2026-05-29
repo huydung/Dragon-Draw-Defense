@@ -25,14 +25,16 @@ export class OneDollarRecognizer {
         continue;
       }
 
-      const distance = distanceAtBestAngle(
-        candidate,
-        template.points,
-        -this.config.GESTURES.DOLLAR_ANGLE_RANGE_RADIANS,
-        this.config.GESTURES.DOLLAR_ANGLE_RANGE_RADIANS,
-        this.config.GESTURES.DOLLAR_ANGLE_PRECISION_RADIANS,
-        this.config
-      );
+      const distance = this.config.GESTURES.DOLLAR_ROTATION_INVARIANT
+        ? distanceAtBestAngle(
+            candidate,
+            template.points,
+            -this.config.GESTURES.DOLLAR_ANGLE_RANGE_RADIANS,
+            this.config.GESTURES.DOLLAR_ANGLE_RANGE_RADIANS,
+            this.config.GESTURES.DOLLAR_ANGLE_PRECISION_RADIANS,
+            this.config
+          )
+        : pathDistance(candidate, template.points);
       const score = scoreDistance(distance, this.config);
 
       scoredCandidates.push({
@@ -67,8 +69,8 @@ function toPointObjects(points) {
 
 function normalizePath(points, config) {
   const resampled = resample(points, config.GESTURES.GESTURE_RESAMPLE_POINTS);
-  const radians = indicativeAngle(resampled);
-  const rotated = rotateBy(resampled, -radians);
+  const radians = config.GESTURES.DOLLAR_ROTATION_INVARIANT ? indicativeAngle(resampled) : 0;
+  const rotated = config.GESTURES.DOLLAR_ROTATION_INVARIANT ? rotateBy(resampled, -radians) : resampled;
   const scaled = scaleToSquare(rotated, config.GESTURES.DOLLAR_SQUARE_SIZE);
   return translateToOrigin(scaled, config.GESTURES.DOLLAR_ORIGIN);
 }

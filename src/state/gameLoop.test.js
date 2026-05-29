@@ -5,9 +5,9 @@ import { createSeededRandom } from "./waveElements.js";
 
 describe("Milestone 3 wave survival loop", () => {
   test("wave ship counts follow configured progression", () => {
-    expect(getWaveShipCount(1)).toBe(5);
-    expect(getWaveShipCount(2)).toBe(8);
-    expect(getWaveShipCount(3)).toBe(11);
+    expect(getWaveShipCount(1)).toBe(GAME_CONFIG.WAVES.BASE_SHIP_COUNT);
+    expect(getWaveShipCount(2)).toBe(GAME_CONFIG.WAVES.BASE_SHIP_COUNT + GAME_CONFIG.WAVES.SHIP_COUNT_INCREMENT);
+    expect(getWaveShipCount(3)).toBe(GAME_CONFIG.WAVES.BASE_SHIP_COUNT + 2 * GAME_CONFIG.WAVES.SHIP_COUNT_INCREMENT);
     expect(getWaveShipCount(5)).toBe(
       GAME_CONFIG.WAVES.BASE_SHIP_COUNT + (5 - 1) * GAME_CONFIG.WAVES.SHIP_COUNT_INCREMENT
     );

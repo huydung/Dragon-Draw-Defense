@@ -73,7 +73,7 @@ export const GAME_CONFIG = {
 
   WAVES: {
     BASE_SHIP_COUNT: 5,
-    SHIP_COUNT_INCREMENT: 3,
+    SHIP_COUNT_INCREMENT: 4,
     WAVE_ELEMENT_COUNT: 5,
     BASE_SHIP_SPEED: 40,
     SPEED_GROWTH_MULTIPLIER: 0.15,
@@ -99,12 +99,13 @@ export const GAME_CONFIG = {
     TRAIL_COLOR: "#00ffcc",
     TRAIL_WIDTH: 4,
     GESTURE_ACCEPTANCE_THRESHOLD: 0.75,
-    GESTURE_AMBIGUITY_MARGIN: 0.05,
-    GESTURE_PRECISION_THRESHOLD: 0.85,
+    GESTURE_AMBIGUITY_MARGIN: 0.1,
+    GESTURE_PRECISION_THRESHOLD: 0.80,
     GESTURE_RESAMPLE_POINTS: 64,
     MIN_STROKE_POINTS: 2,
     DOLLAR_SQUARE_SIZE: 250,
     DOLLAR_ORIGIN: { x: 0, y: 0 },
+    DOLLAR_ROTATION_INVARIANT: false,
     DOLLAR_ANGLE_RANGE_RADIANS: Math.PI / 4,
     DOLLAR_ANGLE_PRECISION_RADIANS: Math.PI / 90,
     DOLLAR_GOLDEN_RATIO_HALF: 0.5 * (-1 + Math.sqrt(5)),
@@ -185,7 +186,7 @@ export const GAME_CONFIG = {
         [50, 90],
         [10, 50]
       ]
-    }
+    } 
     // SANDBOX_TEMPLATES_END
   },
 
@@ -331,10 +332,10 @@ export const GAME_CONFIG = {
       runEnd: PUBLIC_ASSET_PATHS.runEnd
     },
     VOLUMES: {
-      MUSIC: 0.18,
-      SFX: 0.55,
-      STRIKE: 0.44,
-      BURST: 0.5,
+      MUSIC: 0.98,
+      SFX: 0.45,
+      STRIKE: 0.1,
+      BURST: 0.2,
       CLICK: 0.28,
       REJECT: 0.22,
       RUNEND: 0.42

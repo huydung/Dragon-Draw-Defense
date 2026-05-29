@@ -61,6 +61,32 @@ describe("$1 gesture recognizer integration", () => {
 
     expect(result.accepted).toBe(false);
   });
+
+  test("keeps orientation significant when rotation invariance is disabled", () => {
+    const recognizer = new OneDollarRecognizer({
+      ...GAME_CONFIG,
+      GESTURES: {
+        ...GAME_CONFIG.GESTURES,
+        TEMPLATES: {
+          Horizontal: [
+            [10, 50],
+            [90, 50]
+          ],
+          Vertical: [
+            [50, 10],
+            [50, 90]
+          ]
+        }
+      }
+    });
+
+    const result = recognizer.recognize(toPoints([[50, 10], [50, 90]]));
+
+    expect(result.name).toBe("Vertical");
+    expect(result.candidates[0].name).toBe("Vertical");
+    expect(result.candidates[1].name).toBe("Horizontal");
+    expect(result.candidates[0].score).toBeGreaterThan(result.candidates[1].score);
+  });
 });
 
 function toPoints(points) {
