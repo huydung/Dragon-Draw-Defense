@@ -11,6 +11,7 @@ const DRAGON_IMAGE_PATHS = {
   Shadow: new URL("./assets/dragons/Shadow_Shadow_Dragon.png", import.meta.url).href,
   Prism: new URL("./assets/dragons/Prism_Cosmic_Prism_Dragon.png", import.meta.url).href
 };
+const PUBLIC_ASSET_BASE = import.meta.env?.BASE_URL ?? "/";
 
 export const GAME_CONFIG = {
   PLAYFIELD: {
@@ -255,7 +256,11 @@ export const GAME_CONFIG = {
     DEFENSE_LABEL_Y: 72,
     SHIP_BADGE_OFFSET_Y: 28,
     SHIP_NOSE_WIDTH: 16,
-    SHIP_VARIANT_PATHS: ["/ships/ship-base-1.png", "/ships/ship-base-2.png", "/ships/ship-base-3.png"],
+    SHIP_VARIANT_PATHS: [
+      `${PUBLIC_ASSET_BASE}ships/ship-base-1.png`,
+      `${PUBLIC_ASSET_BASE}ships/ship-base-2.png`,
+      `${PUBLIC_ASSET_BASE}ships/ship-base-3.png`
+    ],
     SHIP_FLAG_OFFSET_X: -4,
     SHIP_FLAG_OFFSET_Y: -18,
     SHIP_FLAG_WIDTH: 42,
