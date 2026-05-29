@@ -38,7 +38,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Build
-        run: npm run build -- --base=/DMLProtoGemini/
+        run: npm run build -- --base=/Dragon-Draw-Defense/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
