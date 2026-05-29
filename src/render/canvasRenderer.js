@@ -9,15 +9,11 @@ export class CanvasRenderer {
     this.config = config;
     this.shipImages = this.loadShipImages();
     this.dragonImages = this.loadDragonImages();
+    this.habitatImages = this.loadHabitatImages();
     this.effectImages = this.loadEffectImages();
     this.tintedEffectCache = new Map();
     this.staticBackground = null;
-    this.staticBackgroundUsesImage = false;
     this.hudSnapshot = {};
-    this.backgroundImage = this.loadImage(this.config.RENDER.BACKGROUND_IMAGE_PATH);
-    this.backgroundImage.onload = () => {
-      this.staticBackground = null;
-    };
     this.resizeObserver = new ResizeObserver(this.resizeCanvas);
   }
 
@@ -51,8 +47,11 @@ export class CanvasRenderer {
     });
   }
 
-  loadImage(path) {
+  loadImage(path, onLoad) {
     const image = new Image();
+    if (onLoad) {
+      image.addEventListener("load", onLoad, { once: true });
+    }
     image.src = path;
     return image;
   }
@@ -64,6 +63,13 @@ export class CanvasRenderer {
         image.src = path;
         return [name, image];
       })
+    );
+  }
+
+  loadHabitatImages() {
+    const paths = this.config.RENDER.HABITAT_IMAGE_PATHS;
+    return Object.fromEntries(
+      Object.entries(paths).map(([name, path]) => [name, this.loadImage(path, () => this.invalidateStaticBackground())])
     );
   }
 
@@ -83,8 +89,12 @@ export class CanvasRenderer {
     this.canvas.width = VIRTUAL_WIDTH * pixelRatio;
     this.canvas.height = VIRTUAL_HEIGHT * pixelRatio;
     this.ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    this.staticBackground = null;
+    this.invalidateStaticBackground();
   };
+
+  invalidateStaticBackground() {
+    this.staticBackground = null;
+  }
 
   renderHud(state) {
     const nextSnapshot = {
@@ -169,17 +179,15 @@ export class CanvasRenderer {
   }
 
   getStaticBackground() {
-    const imageReady = this.backgroundImage?.complete && this.backgroundImage.naturalWidth > 0;
-    if (this.staticBackground && this.staticBackgroundUsesImage === imageReady) {
+    if (this.staticBackground) {
       return this.staticBackground;
     }
 
-    this.staticBackground = this.createStaticBackground(imageReady);
-    this.staticBackgroundUsesImage = imageReady;
+    this.staticBackground = this.createStaticBackground();
     return this.staticBackground;
   }
 
-  createStaticBackground(imageReady) {
+  createStaticBackground() {
     const colors = this.config.RENDER.COLORS;
     const width = this.config.PLAYFIELD.VIRTUAL_WIDTH;
     const height = this.config.PLAYFIELD.VIRTUAL_HEIGHT;
@@ -188,17 +196,8 @@ export class CanvasRenderer {
     canvas.width = width;
     canvas.height = height;
 
-    if (imageReady) {
-      this.drawCoverImage(context, this.backgroundImage, 0, 0, width, height);
-      context.fillStyle = "rgba(5, 13, 23, 0.58)";
-      context.fillRect(0, 0, width, height);
-    } else {
-      const gradient = context.createLinearGradient(0, 0, 0, height);
-      gradient.addColorStop(0, colors.PLAYFIELD_TOP);
-      gradient.addColorStop(1, colors.PLAYFIELD_BOTTOM);
-      context.fillStyle = gradient;
-      context.fillRect(0, 0, width, height);
-    }
+    this.drawSeaBackground(context, width, height, colors);
+    this.drawHabitat(context);
 
     context.strokeStyle = colors.GRID_LINE;
     context.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH;
@@ -212,13 +211,80 @@ export class CanvasRenderer {
     return canvas;
   }
 
-  drawCoverImage(context, image, x, y, width, height) {
-    const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
-    const sourceWidth = width / scale;
-    const sourceHeight = height / scale;
-    const sourceX = (image.naturalWidth - sourceWidth) / 2;
-    const sourceY = (image.naturalHeight - sourceHeight) / 2;
-    context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
+  drawSeaBackground(context, width, height, colors) {
+    const gradient = context.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, colors.PLAYFIELD_TOP);
+    gradient.addColorStop(0.52, "#166f8f");
+    gradient.addColorStop(1, colors.PLAYFIELD_BOTTOM);
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, width, height);
+
+    context.save();
+    context.globalAlpha = 0.18;
+    context.strokeStyle = "rgba(215, 250, 255, 0.72)";
+    context.lineWidth = 2;
+    for (let y = this.config.PLAYFIELD.SAFE_TOP_PADDING + 28; y < height; y += 42) {
+      context.beginPath();
+      for (let x = -40; x <= width + 40; x += 20) {
+        const waveY = y + Math.sin((x + y * 1.7) / 26) * 4;
+        if (x === -40) {
+          context.moveTo(x, waveY);
+        } else {
+          context.lineTo(x, waveY);
+        }
+      }
+      context.stroke();
+    }
+    context.restore();
+  }
+
+  drawHabitat(context) {
+    const perimeterX = this.config.PLAYFIELD.DAMAGE_PERIMETER_X;
+    const height = this.config.PLAYFIELD.VIRTUAL_HEIGHT;
+    const top = this.config.PLAYFIELD.SAFE_TOP_PADDING;
+
+    context.save();
+    context.globalAlpha = 0.88;
+    context.fillStyle = "#f2d996";
+    context.beginPath();
+    context.moveTo(0, top + 36);
+    context.bezierCurveTo(34, top + 12, 74, top + 28, perimeterX + 14, top + 6);
+    context.lineTo(perimeterX + 18, height);
+    context.lineTo(0, height);
+    context.closePath();
+    context.fill();
+
+    context.fillStyle = "#40b969";
+    context.beginPath();
+    context.moveTo(0, top + 88);
+    context.bezierCurveTo(32, top + 64, 75, top + 92, perimeterX + 12, top + 68);
+    context.lineTo(perimeterX + 15, height);
+    context.lineTo(0, height);
+    context.closePath();
+    context.fill();
+
+    context.strokeStyle = "rgba(255, 251, 214, 0.68)";
+    context.lineWidth = 5;
+    context.beginPath();
+    context.moveTo(perimeterX + 11, top + 8);
+    context.bezierCurveTo(82, top + 88, 122, top + 230, perimeterX + 18, height);
+    context.stroke();
+
+    this.drawImageOn(context, this.habitatImages.house, 7, top + 30, 58, 38, 0.72);
+    this.drawImageOn(context, this.habitatImages.palm, 8, height - 138, 58, 69, 0.64);
+    this.drawImageOn(context, this.habitatImages.tree, 74, height - 112, 28, 60, 0.72);
+    context.restore();
+  }
+
+  drawImageOn(context, image, x, y, width, height, alpha = 1) {
+    if (!image?.complete || image.naturalWidth <= 0) {
+      return;
+    }
+
+    context.save();
+    context.globalAlpha *= alpha;
+    context.drawImage(image, x, y, width, height);
+    context.restore();
   }
 
   drawDefenseLine() {
@@ -231,9 +297,6 @@ export class CanvasRenderer {
       { x: this.config.PLAYFIELD.DAMAGE_PERIMETER_X, y: this.config.PLAYFIELD.VIRTUAL_HEIGHT }
     );
     this.ctx.setLineDash([]);
-    this.ctx.fillStyle = this.config.RENDER.COLORS.DEFENSE_LINE;
-    this.ctx.font = `${this.config.UI.PANEL_RADIUS_PX + this.config.UI.BUTTON_RADIUS_PX}px ${this.config.UI.FONT_FAMILY}`;
-    this.ctx.fillText("DEFENSE LINE", this.config.PLAYFIELD.DAMAGE_PERIMETER_X + this.config.UI.HUD_GAP_PX, this.config.RENDER.DEFENSE_LABEL_Y);
     this.ctx.restore();
   }
 
@@ -247,6 +310,23 @@ export class CanvasRenderer {
     this.ctx.globalAlpha = alpha * 0.36;
     this.ctx.fillStyle = this.config.RENDER.COLORS.FAILURE;
     this.ctx.fillRect(0, 0, this.config.PLAYFIELD.VIRTUAL_WIDTH, this.config.PLAYFIELD.VIRTUAL_HEIGHT);
+    this.ctx.restore();
+    this.drawHabitatDamage(alpha, nowMs);
+  }
+
+  drawHabitatDamage(alpha, nowMs) {
+    const pulse = 0.72 + Math.sin(nowMs / 70) * 0.18;
+    const impactX = this.config.PLAYFIELD.DAMAGE_PERIMETER_X - 10;
+    const impactY = this.config.PLAYFIELD.VIRTUAL_HEIGHT * 0.58;
+
+    this.ctx.save();
+    this.ctx.globalAlpha = Math.min(1, alpha * 1.35);
+    this.ctx.strokeStyle = "rgba(255, 244, 199, 0.78)";
+    this.ctx.lineWidth = 2;
+    this.drawLine({ x: impactX + 72, y: impactY - 48 }, { x: impactX + 8, y: impactY - 10 });
+    this.drawSprite(this.habitatImages.cannonball, impactX + 8, impactY - 10, 14, 14, 0, 0.95);
+    this.drawSprite(this.habitatImages.fire1, impactX - 12, impactY + 10, 24 * pulse, 50 * pulse, 0, 0.9);
+    this.drawSprite(this.habitatImages.fire2, impactX + 15, impactY + 18, 20 * pulse, 45 * pulse, 0, 0.82);
     this.ctx.restore();
   }
 

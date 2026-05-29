@@ -57,7 +57,6 @@ document.documentElement.style.setProperty("--button-radius", `${GAME_CONFIG.UI.
 document.documentElement.style.setProperty("--sandbox-width", `${GAME_CONFIG.UI.SANDBOX_WIDTH_PX}px`);
 document.documentElement.style.setProperty("--sandbox-textarea-height", `${GAME_CONFIG.UI.SANDBOX_TEXTAREA_HEIGHT_PX}px`);
 document.documentElement.style.setProperty("--sandbox-offset", `${GAME_CONFIG.UI.SANDBOX_OFFSET_PX}px`);
-document.documentElement.style.setProperty("--background-art", `url("${GAME_CONFIG.RENDER.BACKGROUND_IMAGE_PATH}")`);
 document.documentElement.style.setProperty("--canvas-cursor", `url("${GAME_CONFIG.RENDER.CURSOR_IMAGE_PATH}") 16 16, crosshair`);
 document.documentElement.style.setProperty("--button-art", `url("${GAME_CONFIG.RENDER.BUTTON_IMAGE_PATH}")`);
 

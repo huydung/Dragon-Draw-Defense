@@ -28,10 +28,11 @@ body::before {
   content: "";
   position: fixed;
   inset: -18px;
-  background-image: linear-gradient(rgba(6, 12, 22, 0.7), rgba(6, 12, 22, 0.8)), var(--background-art);
-  background-position: center;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(120, 214, 225, 0.22), transparent 34%),
+    linear-gradient(180deg, #1e789b 0%, #0e516c 62%, #0a3449 100%);
   background-size: cover;
-  filter: blur(10px) saturate(0.92);
+  filter: blur(10px) saturate(0.98);
   transform: scale(1.04);
 }
 

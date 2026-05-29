@@ -13,7 +13,6 @@ const DRAGON_IMAGE_PATHS = {
 };
 const PUBLIC_ASSET_BASE = import.meta.env?.BASE_URL ?? "/";
 const PUBLIC_ASSET_PATHS = {
-  background: `${PUBLIC_ASSET_BASE}ui/playfield-pirates.jpg`,
   cursor: `${PUBLIC_ASSET_BASE}ui/crosshair-blue.png`,
   button: `${PUBLIC_ASSET_BASE}ui/button-long-blue.png`,
   music: `${PUBLIC_ASSET_BASE}audio/dragon-defense-loop.ogg`,
@@ -26,7 +25,13 @@ const PUBLIC_ASSET_PATHS = {
   effectBolt: `${PUBLIC_ASSET_BASE}effects/bolt.png`,
   effectExplosion1: `${PUBLIC_ASSET_BASE}effects/explosion-1.png`,
   effectExplosion2: `${PUBLIC_ASSET_BASE}effects/explosion-2.png`,
-  effectExplosion3: `${PUBLIC_ASSET_BASE}effects/explosion-3.png`
+  effectExplosion3: `${PUBLIC_ASSET_BASE}effects/explosion-3.png`,
+  habitatHouse: `${PUBLIC_ASSET_BASE}habitat/house.png`,
+  habitatPalm: `${PUBLIC_ASSET_BASE}habitat/palm.png`,
+  habitatTree: `${PUBLIC_ASSET_BASE}habitat/tree.png`,
+  habitatCannonball: `${PUBLIC_ASSET_BASE}habitat/cannonball.png`,
+  habitatFire1: `${PUBLIC_ASSET_BASE}habitat/fire-1.png`,
+  habitatFire2: `${PUBLIC_ASSET_BASE}habitat/fire-2.png`
 };
 
 export const GAME_CONFIG = {
@@ -247,9 +252,9 @@ export const GAME_CONFIG = {
     COLORS: {
       PAGE_BACKGROUND: "#111827",
       PANEL_BACKGROUND: "rgba(9, 16, 30, 0.78)",
-      PLAYFIELD_TOP: "#1c3442",
-      PLAYFIELD_BOTTOM: "#13242e",
-      GRID_LINE: "rgba(255, 255, 255, 0.055)",
+      PLAYFIELD_TOP: "#1f7fa2",
+      PLAYFIELD_BOTTOM: "#0f506b",
+      GRID_LINE: "rgba(213, 244, 255, 0.075)",
       DEFENSE_LINE: "#f7d774",
       DRAGON_FILL: "#2ed3a2",
       DRAGON_STROKE: "#d8fff1",
@@ -270,11 +275,9 @@ export const GAME_CONFIG = {
       LASER_GLOW: "rgba(255, 229, 129, 0.42)"
     },
     BACKGROUND_GRID_STEP: 40,
-    BACKGROUND_IMAGE_PATH: PUBLIC_ASSET_PATHS.background,
     CURSOR_IMAGE_PATH: PUBLIC_ASSET_PATHS.cursor,
     BUTTON_IMAGE_PATH: PUBLIC_ASSET_PATHS.button,
     DEFENSE_LINE_DASH: [8, 8],
-    DEFENSE_LABEL_Y: 72,
     SHIP_BADGE_OFFSET_Y: 28,
     SHIP_NOSE_WIDTH: 16,
     SHIP_VARIANT_PATHS: [
@@ -292,6 +295,14 @@ export const GAME_CONFIG = {
     SHIP_GLYPH_ANIMATION_MS: 1600,
     SHIP_GLYPH_REST_MS: 500,
     DRAGON_IMAGE_PATHS,
+    HABITAT_IMAGE_PATHS: {
+      house: PUBLIC_ASSET_PATHS.habitatHouse,
+      palm: PUBLIC_ASSET_PATHS.habitatPalm,
+      tree: PUBLIC_ASSET_PATHS.habitatTree,
+      cannonball: PUBLIC_ASSET_PATHS.habitatCannonball,
+      fire1: PUBLIC_ASSET_PATHS.habitatFire1,
+      fire2: PUBLIC_ASSET_PATHS.habitatFire2
+    },
     EFFECT_IMAGE_PATHS: {
       muzzle: PUBLIC_ASSET_PATHS.effectMuzzle,
       magicRing: PUBLIC_ASSET_PATHS.effectMagicRing,
