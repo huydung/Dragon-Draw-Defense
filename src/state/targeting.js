@@ -41,6 +41,7 @@ export function applyGlyphStrike(state, gesture, nowMs, config = GAME_CONFIG) {
   return {
     ...state,
     score: state.score + scoreGain,
+    defeatedShipCount: (state.defeatedShipCount ?? 0) + 1,
     resolvedShipCount: (state.resolvedShipCount ?? 0) + 1,
     ships: state.ships.map((ship) => (ship.id === target.id ? { ...ship, active: false } : ship)),
     lasers: [

@@ -8,6 +8,7 @@ export class CanvasRenderer {
     this.hudElements = hudElements;
     this.config = config;
     this.shipImages = this.loadShipImages();
+    this.dragonImages = this.loadDragonImages();
     this.resizeObserver = new ResizeObserver(this.resizeCanvas);
   }
 
@@ -26,7 +27,7 @@ export class CanvasRenderer {
     this.drawDefenseLine();
     this.drawDragons(state.activeElements);
     this.drawShips(state.ships, nowMs);
-    this.drawLasers(state.lasers);
+    this.drawLasers(state.lasers, nowMs);
     this.drawTrail(trail, nowMs);
     this.drawWaveSelectionDialog(state, nowMs);
     this.renderFeedback(state.feedback);
@@ -38,6 +39,16 @@ export class CanvasRenderer {
       image.src = path;
       return image;
     });
+  }
+
+  loadDragonImages() {
+    return Object.fromEntries(
+      Object.entries(this.config.RENDER.DRAGON_IMAGE_PATHS).map(([name, path]) => {
+        const image = new Image();
+        image.src = path;
+        return [name, image];
+      })
+    );
   }
 
   resizeCanvas = () => {
@@ -74,7 +85,38 @@ export class CanvasRenderer {
     }
 
     this.hudElements.gameOver.hidden = !state.gameOver;
+    if (!state.gameOver) {
+      return;
+    }
+
+    const defeatedShips = state.defeatedShipCount ?? 0;
+    const survivedWaves = Math.max(0, state.wave - 1);
+    const highScores = state.highScores ?? [];
+    const bestScore = highScores[0]?.score ?? state.score;
+
+    this.hudElements.gameOverTitle.textContent = "Stand Tall, Sentry";
+    this.hudElements.finalSummary.textContent = `You defeated ${defeatedShips} ships and survived ${survivedWaves} waves.`;
     this.hudElements.finalScore.textContent = `Final Score: ${String(state.score).padStart(6, "0")}`;
+    this.hudElements.finalHighScore.textContent = `High Score: ${String(bestScore).padStart(6, "0")}`;
+    this.renderHighScores(highScores);
+  }
+
+  renderHighScores(highScores) {
+    if (!this.hudElements.highScoreList) {
+      return;
+    }
+
+    this.hudElements.highScoreList.replaceChildren(
+      ...highScores.map((entry) => {
+        const item = document.createElement("li");
+        const score = document.createElement("strong");
+        const meta = document.createElement("small");
+        score.textContent = String(entry.score).padStart(6, "0");
+        meta.textContent = ` · ${entry.defeatedShips} ships · wave ${entry.reachedWave}`;
+        item.append(score, meta);
+        return item;
+      })
+    );
   }
 
   clear() {
@@ -138,21 +180,12 @@ export class CanvasRenderer {
       }
 
       this.ctx.save();
-      this.ctx.fillStyle = this.config.RENDER.COLORS.DRAGON_FILL;
-      this.ctx.strokeStyle = element.color;
-      this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH + this.config.RENDER.CANVAS_BORDER_WIDTH;
-      this.ctx.beginPath();
-      this.ctx.arc(position.x, position.y, this.config.PLAYFIELD.DRAGON_RADIUS, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.stroke();
-      this.ctx.fillStyle = this.config.RENDER.COLORS.TEXT;
-      this.ctx.font = `700 ${this.config.PLAYFIELD.DRAGON_RADIUS}px ${this.config.UI.FONT_FAMILY}`;
-      this.ctx.textAlign = "center";
-      this.ctx.textBaseline = "middle";
-      this.ctx.fillText(element.label, position.x, position.y);
+      this.drawDragonPortrait(name, position.x, position.y, this.config.RENDER.DRAGON_IMAGE_SIZE, element.color);
       this.ctx.font = `${this.config.UI.PANEL_RADIUS_PX + this.config.RENDER.CANVAS_BORDER_WIDTH}px ${this.config.UI.FONT_FAMILY}`;
       this.ctx.fillStyle = this.config.RENDER.COLORS.MUTED_TEXT;
-      this.ctx.fillText(name, position.x, position.y + this.config.PLAYFIELD.DRAGON_RADIUS + this.config.UI.HUD_GAP_PX);
+      this.ctx.textAlign = "center";
+      this.ctx.textBaseline = "middle";
+      this.ctx.fillText(name, position.x, position.y + this.config.RENDER.DRAGON_IMAGE_SIZE / 2 + this.config.UI.HUD_GAP_PX);
       this.ctx.restore();
     });
   }
@@ -169,7 +202,13 @@ export class CanvasRenderer {
 
     this.ctx.save();
     if (image?.complete && image.naturalWidth > 0) {
-      this.ctx.drawImage(image, left, top, this.config.PLAYFIELD.SHIP_WIDTH, this.config.PLAYFIELD.SHIP_HEIGHT);
+      if (this.config.RENDER.FLIPPED_SHIP_VARIANT_INDICES.includes(variantIndex % this.shipImages.length)) {
+        this.ctx.translate(left + this.config.PLAYFIELD.SHIP_WIDTH, top);
+        this.ctx.scale(-1, 1);
+        this.ctx.drawImage(image, 0, 0, this.config.PLAYFIELD.SHIP_WIDTH, this.config.PLAYFIELD.SHIP_HEIGHT);
+      } else {
+        this.ctx.drawImage(image, left, top, this.config.PLAYFIELD.SHIP_WIDTH, this.config.PLAYFIELD.SHIP_HEIGHT);
+      }
     } else {
       this.drawFallbackShip(left, top, ship.y);
     }
@@ -326,34 +365,111 @@ export class CanvasRenderer {
     this.ctx.fill();
     this.ctx.stroke();
 
-    this.ctx.fillStyle = this.config.RENDER.COLORS.DRAGON_FILL;
-    this.ctx.strokeStyle = element.color;
-    this.ctx.beginPath();
-    this.ctx.arc(centerX, iconY, this.config.PLAYFIELD.DRAGON_RADIUS, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.stroke();
-    this.ctx.fillStyle = colors.TEXT;
-    this.ctx.font = `700 ${this.config.PLAYFIELD.DRAGON_RADIUS}px ${this.config.UI.FONT_FAMILY}`;
-    this.ctx.textAlign = "center";
-    this.ctx.textBaseline = "middle";
-    this.ctx.fillText(element.label, centerX, iconY);
+    this.drawDragonPortrait(name, centerX, iconY, this.config.RENDER.DRAGON_SELECTION_IMAGE_SIZE, element.color);
     this.ctx.font = `${this.config.UI.PANEL_RADIUS_PX + this.config.RENDER.CANVAS_BORDER_WIDTH}px ${this.config.UI.FONT_FAMILY}`;
     this.ctx.fillStyle = colors.MUTED_TEXT;
+    this.ctx.textAlign = "center";
+    this.ctx.textBaseline = "middle";
     this.ctx.fillText(name, centerX, top + this.config.RENDER.SELECTION_TILE_HEIGHT - this.config.UI.BUTTON_RADIUS_PX * 2);
     this.ctx.restore();
   }
 
-  drawLasers(lasers) {
+  drawLasers(lasers, nowMs) {
     lasers.forEach((laser) => {
+      const remainingMs = laser.expiresAtMs - nowMs;
+      const progress = 1 - Math.max(0, Math.min(1, remainingMs / this.config.RENDER.LASER_DURATION_MS));
+      const pulse = Math.sin(progress * Math.PI);
+      const color = laser.color ?? this.config.RENDER.COLORS.LASER_CORE;
+
       this.ctx.save();
-      this.ctx.strokeStyle = this.config.RENDER.COLORS.LASER_GLOW;
-      this.ctx.lineWidth = this.config.RENDER.LASER_GLOW_WIDTH;
+      this.ctx.globalCompositeOperation = "lighter";
+      this.ctx.lineCap = "round";
+      this.ctx.strokeStyle = color;
+      this.ctx.globalAlpha = 0.18 + pulse * 0.24;
+      this.ctx.lineWidth = this.config.RENDER.LASER_GLOW_WIDTH + pulse * this.config.UI.HUD_GAP_PX;
       this.drawLine(laser.from, laser.to);
-      this.ctx.strokeStyle = laser.color ?? this.config.RENDER.COLORS.LASER_CORE;
-      this.ctx.lineWidth = this.config.RENDER.LASER_WIDTH;
+      this.ctx.strokeStyle = this.config.RENDER.COLORS.LASER_CORE;
+      this.ctx.globalAlpha = 0.88;
+      this.ctx.lineWidth = this.config.RENDER.LASER_WIDTH + pulse * this.config.RENDER.CANVAS_BORDER_WIDTH * 3;
       this.drawLine(laser.from, laser.to);
+      this.drawMuzzleFlash(laser.from, color, pulse);
+      this.drawImpactBurst(laser, progress, pulse, color);
       this.ctx.restore();
     });
+  }
+
+  drawDragonPortrait(name, centerX, centerY, size, strokeColor) {
+    const image = this.dragonImages[name];
+    const radius = size / 2;
+
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    this.ctx.clip();
+    this.ctx.fillStyle = this.config.RENDER.COLORS.DRAGON_FILL;
+    this.ctx.fillRect(centerX - radius, centerY - radius, size, size);
+
+    if (image?.complete && image.naturalWidth > 0) {
+      this.ctx.drawImage(image, centerX - radius, centerY - radius, size, size);
+    } else {
+      this.ctx.fillStyle = this.config.RENDER.COLORS.TEXT;
+      this.ctx.font = `700 ${Math.round(size * 0.34)}px ${this.config.UI.FONT_FAMILY}`;
+      this.ctx.textAlign = "center";
+      this.ctx.textBaseline = "middle";
+      this.ctx.fillText(this.config.ELEMENTS[name]?.label ?? "?", centerX, centerY);
+    }
+
+    this.ctx.restore();
+    this.ctx.save();
+    this.ctx.strokeStyle = strokeColor;
+    this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH * 2;
+    this.ctx.shadowColor = strokeColor;
+    this.ctx.shadowBlur = this.config.UI.HUD_GAP_PX;
+    this.ctx.beginPath();
+    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    this.ctx.stroke();
+    this.ctx.restore();
+  }
+
+  drawMuzzleFlash(point, color, pulse) {
+    const radius = this.config.RENDER.LASER_MUZZLE_RADIUS * (0.55 + pulse * 0.45);
+    const gradient = this.ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius);
+    gradient.addColorStop(0, this.config.RENDER.COLORS.LASER_CORE);
+    gradient.addColorStop(0.45, color);
+    gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+    this.ctx.fillStyle = gradient;
+    this.ctx.globalAlpha = 0.74;
+    this.ctx.beginPath();
+    this.ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+    this.ctx.fill();
+  }
+
+  drawImpactBurst(laser, progress, pulse, color) {
+    const radius = this.config.RENDER.LASER_IMPACT_RADIUS * (0.35 + progress * 0.95);
+
+    this.ctx.strokeStyle = color;
+    this.ctx.globalAlpha = Math.max(0, 1 - progress) * 0.78;
+    this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH * 3;
+    this.ctx.beginPath();
+    this.ctx.arc(laser.to.x, laser.to.y, radius, 0, Math.PI * 2);
+    this.ctx.stroke();
+
+    for (let index = 0; index < this.config.RENDER.LASER_PARTICLE_COUNT; index += 1) {
+      const angle = seededAngle(laser.id, index);
+      const distance = this.config.RENDER.LASER_PARTICLE_DISTANCE * progress * (0.45 + (index % 5) * 0.12);
+      const sparkLength = this.config.UI.HUD_GAP_PX * (0.5 + pulse * 0.7);
+      const x = laser.to.x + Math.cos(angle) * distance;
+      const y = laser.to.y + Math.sin(angle) * distance;
+      this.ctx.strokeStyle = index % 3 === 0 ? this.config.RENDER.COLORS.LASER_CORE : color;
+      this.ctx.globalAlpha = Math.max(0, 1 - progress) * 0.95;
+      this.drawLine(
+        { x, y },
+        {
+          x: x + Math.cos(angle) * sparkLength,
+          y: y + Math.sin(angle) * sparkLength
+        }
+      );
+    }
   }
 
   drawTrail(trail, nowMs) {
@@ -402,4 +518,15 @@ export class CanvasRenderer {
 
 function toPoint(point) {
   return { x: point[0], y: point[1] };
+}
+
+function seededAngle(seed, index) {
+  let hash = 0;
+  const value = `${seed}-${index}`;
+
+  for (let characterIndex = 0; characterIndex < value.length; characterIndex += 1) {
+    hash = (hash * 31 + value.charCodeAt(characterIndex)) >>> 0;
+  }
+
+  return ((hash % 6283) / 1000) % (Math.PI * 2);
 }

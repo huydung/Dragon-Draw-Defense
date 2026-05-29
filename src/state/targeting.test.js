@@ -33,6 +33,7 @@ describe("Viking Raid Sentry targeting", () => {
     );
 
     expect(nextState.score).toBe(150);
+    expect(nextState.defeatedShipCount).toBe(1);
     expect(nextState.ships.find((ship) => ship.id === "ship-fire-close").active).toBe(false);
     expect(nextState.ships.find((ship) => ship.id === "ship-fire-far").active).toBe(true);
     expect(nextState.lasers).toHaveLength(1);

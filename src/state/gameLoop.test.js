@@ -72,6 +72,7 @@ describe("Milestone 3 wave survival loop", () => {
 
     expect(state.wave).toBe(1);
     expect(state.score).toBe(0);
+    expect(state.defeatedShipCount).toBe(0);
     expect(state.health).toBe(GAME_CONFIG.HEALTH.INITIAL_HEALTH);
     expect(state.gameOver).toBe(false);
     expect(state.phase).toBe("transition");

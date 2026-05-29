@@ -149,7 +149,7 @@ textarea {
 }
 
 #game-over-panel {
-  width: min(420px, calc(100% - var(--hud-gap) * 4));
+  width: min(520px, calc(100% - var(--hud-gap) * 4));
   display: grid;
   gap: var(--hud-gap);
   padding: calc(var(--hud-gap) * 2);
@@ -161,8 +161,22 @@ textarea {
 }
 
 #game-over-panel h1,
+#game-over-panel h2,
 #game-over-panel p {
   margin: 0;
+}
+
+#game-over-panel h1 {
+  font-size: clamp(1.7rem, 5vh, 3rem);
+}
+
+#final-summary {
+  color: var(--accent-color);
+  font-weight: 900;
+}
+
+#final-high-score {
+  color: var(--muted-text-color);
 }
 
 #restart-game {
@@ -175,11 +189,37 @@ textarea {
   cursor: pointer;
 }
 
-#leaderboard-placeholder {
-  min-height: calc(var(--hud-height) * 2);
-  border: var(--panel-border-width) dashed color-mix(in srgb, var(--text-color), transparent 60%);
+#leaderboard {
+  display: grid;
+  gap: calc(var(--hud-gap) / 2);
+  padding: var(--hud-gap);
+  border: var(--panel-border-width) solid color-mix(in srgb, var(--text-color), transparent 70%);
   border-radius: var(--button-radius);
-  opacity: 0.62;
+  text-align: left;
+}
+
+#leaderboard h2 {
+  color: var(--muted-text-color);
+  font-size: 0.95rem;
+}
+
+#high-score-list {
+  margin: 0;
+  padding-left: calc(var(--hud-gap) * 2);
+  color: var(--text-color);
+}
+
+#high-score-list:empty::before {
+  content: "No runs recorded yet.";
+  color: var(--muted-text-color);
+}
+
+#high-score-list li {
+  padding-block: 2px;
+}
+
+#high-score-list small {
+  color: var(--muted-text-color);
 }
 
 #sandbox-link {

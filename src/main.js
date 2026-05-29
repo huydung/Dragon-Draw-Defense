@@ -3,6 +3,7 @@ import { GestureInput } from "./input/gestureInput.js";
 import { OneDollarRecognizer } from "./input/oneDollarRecognizer.js";
 import { CanvasRenderer } from "./render/canvasRenderer.js";
 import { advanceGameState, createInitialGameState, restartGame } from "./state/gameLoop.js";
+import { createHighScoreEntry, insertHighScore, loadHighScores, saveHighScores } from "./state/highScores.js";
 import { applyGlyphStrike, pruneTransientState } from "./state/targeting.js";
 import "./styles.css";
 
@@ -16,10 +17,18 @@ const renderer = new CanvasRenderer(canvas, {
   feedback: document.querySelector("#feedback"),
   waveBanner: document.querySelector("#wave-banner"),
   gameOver: document.querySelector("#game-over"),
-  finalScore: document.querySelector("#final-score")
+  gameOverTitle: document.querySelector("#game-over-title"),
+  finalSummary: document.querySelector("#final-summary"),
+  finalScore: document.querySelector("#final-score"),
+  finalHighScore: document.querySelector("#final-high-score"),
+  highScoreList: document.querySelector("#high-score-list")
 });
 const recognizer = new OneDollarRecognizer();
-let gameState = createInitialGameState(GAME_CONFIG, Math.random, performance.now());
+let highScores = loadHighScores();
+let gameState = {
+  ...createInitialGameState(GAME_CONFIG, Math.random, performance.now()),
+  highScores
+};
 window.__VIKING_RAID_SENTRY__ = {
   config: GAME_CONFIG,
   getState: () => structuredClone(gameState)
@@ -76,13 +85,28 @@ const input = new GestureInput(canvas, {
 renderer.start();
 input.start();
 restartButton.addEventListener("click", () => {
-  gameState = restartGame(performance.now());
+  gameState = {
+    ...restartGame(performance.now()),
+    highScores
+  };
 });
 requestAnimationFrame(tick);
 
 function tick(nowMs) {
   gameState = advanceGameState(gameState, nowMs);
   gameState = pruneTransientState(gameState, nowMs);
+
+  if (gameState.gameOver && !gameState.scoreRecordedAtMs) {
+    const entry = createHighScoreEntry(gameState);
+    highScores = insertHighScore(highScores, entry);
+    saveHighScores(highScores);
+    gameState = {
+      ...gameState,
+      highScores,
+      scoreRecordedAtMs: nowMs
+    };
+  }
+
   renderer.render(gameState, input.getTrail(nowMs), nowMs);
   requestAnimationFrame(tick);
 }

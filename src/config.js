@@ -1,3 +1,17 @@
+const DRAGON_IMAGE_PATHS = {
+  Fire: new URL("./assets/dragons/Fire_Fire_Dragon.png", import.meta.url).href,
+  Wind: new URL("./assets/dragons/Wind_Wind_Dragon.png", import.meta.url).href,
+  Earth: new URL("./assets/dragons/Earth_Earth_Dragon.png", import.meta.url).href,
+  Water: new URL("./assets/dragons/Water_Water_Dragon.png", import.meta.url).href,
+  Plant: new URL("./assets/dragons/Plant_Plant_Dragon.png", import.meta.url).href,
+  Metal: new URL("./assets/dragons/Metal_Metal_Dragon.png", import.meta.url).href,
+  Energy: new URL("./assets/dragons/Energy_Energy_Dragon.png", import.meta.url).href,
+  Void: new URL("./assets/dragons/Void_Void_Dragon.png", import.meta.url).href,
+  Light: new URL("./assets/dragons/Light_Light_Dragon.png", import.meta.url).href,
+  Shadow: new URL("./assets/dragons/Shadow_Shadow_Dragon.png", import.meta.url).href,
+  Prism: new URL("./assets/dragons/Prism_Cosmic_Prism_Dragon.png", import.meta.url).href
+};
+
 export const GAME_CONFIG = {
   PLAYFIELD: {
     VIRTUAL_WIDTH: 800,
@@ -64,7 +78,8 @@ export const GAME_CONFIG = {
 
   SCORE: {
     BASE_SCORE_PER_KILL: 100,
-    PRECISION_BONUS_SCORE: 50
+    PRECISION_BONUS_SCORE: 50,
+    HIGH_SCORE_LIMIT: 5
   },
 
   GESTURES: {
@@ -241,6 +256,7 @@ export const GAME_CONFIG = {
     SHIP_BADGE_OFFSET_Y: 28,
     SHIP_NOSE_WIDTH: 16,
     SHIP_VARIANT_PATHS: ["/ships/ship-base-1.png", "/ships/ship-base-2.png", "/ships/ship-base-3.png"],
+    FLIPPED_SHIP_VARIANT_INDICES: [2],
     SHIP_FLAG_OFFSET_X: -4,
     SHIP_FLAG_OFFSET_Y: -18,
     SHIP_FLAG_WIDTH: 42,
@@ -250,6 +266,9 @@ export const GAME_CONFIG = {
     SHIP_GLYPH_DOT_RADIUS: 2,
     SHIP_GLYPH_ANIMATION_MS: 1600,
     SHIP_GLYPH_REST_MS: 500,
+    DRAGON_IMAGE_PATHS,
+    DRAGON_IMAGE_SIZE: 46,
+    DRAGON_SELECTION_IMAGE_SIZE: 32,
     SELECTION_DIALOG_WIDTH: 500,
     SELECTION_DIALOG_HEIGHT: 320,
     SELECTION_DIALOG_TOP: 74,
@@ -261,9 +280,13 @@ export const GAME_CONFIG = {
     SELECTION_TITLE_Y: 118,
     SELECTION_SUBTITLE_Y: 142,
     SELECTION_GRID_TOP: 162,
-    LASER_DURATION_MS: 240,
+    LASER_DURATION_MS: 520,
     LASER_WIDTH: 5,
     LASER_GLOW_WIDTH: 13,
+    LASER_IMPACT_RADIUS: 30,
+    LASER_PARTICLE_COUNT: 18,
+    LASER_PARTICLE_DISTANCE: 34,
+    LASER_MUZZLE_RADIUS: 18,
     DAMAGE_FLASH_DURATION_MS: 220,
     FEEDBACK_DURATION_MS: 1200,
     CANVAS_BORDER_WIDTH: 1,

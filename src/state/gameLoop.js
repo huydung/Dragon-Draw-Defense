@@ -7,6 +7,7 @@ export function createInitialGameState(config = GAME_CONFIG, rng = Math.random, 
     {
       health: config.HEALTH.INITIAL_HEALTH,
       score: 0,
+      defeatedShipCount: 0,
       lasers: [],
       feedback: null,
       gameOver: false

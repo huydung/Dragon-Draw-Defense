@@ -21,10 +21,15 @@
 
         <div id="game-over" hidden>
           <section id="game-over-panel" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
-            <h1 id="game-over-title">DEFEAT</h1>
+            <h1 id="game-over-title"></h1>
+            <p id="final-summary"></p>
             <p id="final-score"></p>
+            <p id="final-high-score"></p>
             <button id="restart-game" type="button">Restart Prototype</button>
-            <div id="leaderboard-placeholder" aria-label="Future leaderboard placeholder"></div>
+            <section id="leaderboard" aria-label="Recent local high scores">
+              <h2>Recent High Scores</h2>
+              <ol id="high-score-list"></ol>
+            </section>
           </section>
         </div>
 
