@@ -25,7 +25,7 @@ export class CanvasRenderer {
   render(state, trailState, nowMs) {
     this.renderHud(state);
     this.renderWaveBanner();
-    this.renderGameOver(state);
+    this.renderGameOver(state, nowMs);
     this.clear();
     this.drawBackground();
     this.drawDamageFlash(state, nowMs);
@@ -130,13 +130,14 @@ export class CanvasRenderer {
     this.hudElements.waveBanner.textContent = "";
   }
 
-  renderGameOver(state) {
+  renderGameOver(state, nowMs) {
     if (!this.hudElements.gameOver || !this.hudElements.finalScore) {
       return;
     }
 
-    this.hudElements.gameOver.hidden = !state.gameOver;
-    if (!state.gameOver) {
+    const revealGameOver = state.gameOver && nowMs >= (state.gameOverDialogAtMs ?? 0);
+    this.hudElements.gameOver.hidden = !revealGameOver;
+    if (!revealGameOver) {
       return;
     }
 
@@ -241,7 +242,7 @@ export class CanvasRenderer {
   drawHabitat(context) {
     const perimeterX = this.config.PLAYFIELD.DAMAGE_PERIMETER_X;
     const height = this.config.PLAYFIELD.VIRTUAL_HEIGHT;
-    const top = this.config.PLAYFIELD.SAFE_TOP_PADDING;
+    const top = Math.max(0, this.config.PLAYFIELD.SAFE_TOP_PADDING - 34);
 
     context.save();
     context.globalAlpha = 0.88;
@@ -263,7 +264,7 @@ export class CanvasRenderer {
     context.closePath();
     context.fill();
 
-    this.drawImageOn(context, this.habitatImages.house, 7, top + 22, 58, 38, 0.72);
+    this.drawImageOn(context, this.habitatImages.house, 7, top + 38, 58, 38, 0.72);
     this.drawImageOn(context, this.habitatImages.palm, 8, height - 138, 58, 69, 0.55);
     this.drawImageOn(context, this.habitatImages.tree, 82, height - 115, 28, 60, 0.64);
     context.restore();
@@ -333,13 +334,13 @@ export class CanvasRenderer {
         return;
       }
 
-      const idle = this.getDragonIdleMotion(index, nowMs, islandHitCount);
-      const attack = this.getDragonAttackMotion(position, lasers, nowMs);
+      const idle = dragonsDefeated ? { x: 0, y: 0, rotation: 0 } : this.getDragonIdleMotion(index, nowMs, islandHitCount);
+      const attack = dragonsDefeated ? null : this.getDragonAttackMotion(position, lasers, nowMs);
       const attackPulse = attack?.pulse ?? 0;
       const drawX = position.x + idle.x + attackPulse * this.config.RENDER.DRAGON_ATTACK_LUNGE_PX;
       const drawY = position.y + idle.y - attackPulse * this.config.RENDER.DRAGON_ATTACK_LIFT_PX;
       const scale = 1 + attackPulse * this.config.RENDER.DRAGON_ATTACK_SCALE;
-      const rotation = dragonsDefeated ? Math.PI / 2 + Math.sin(nowMs * 0.01 + index) * 0.16 : idle.rotation + attackPulse * 0.12;
+      const rotation = dragonsDefeated ? -Math.PI / 2 : idle.rotation + attackPulse * 0.12;
 
       this.ctx.save();
       this.ctx.translate(drawX, drawY);

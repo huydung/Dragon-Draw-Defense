@@ -76,6 +76,7 @@ describe("Milestone 3 wave survival loop", () => {
     expect(nextState.health).toBe(0);
     expect(nextState.gameOver).toBe(true);
     expect(nextState.islandHitCount).toBe(1);
+    expect(nextState.gameOverDialogAtMs).toBe(100 + GAME_CONFIG.RENDER.GAME_OVER_REVEAL_DELAY_MS);
     expect(nextState.resolvedShipCount).toBe(1);
     logSpy.mockRestore();
   });
@@ -113,6 +114,7 @@ describe("Milestone 3 wave survival loop", () => {
     expect(nextState.health).toBe(0);
     expect(nextState.gameOver).toBe(true);
     expect(nextState.islandHitCount).toBe(1);
+    expect(nextState.gameOverDialogAtMs).toBe(100 + GAME_CONFIG.RENDER.GAME_OVER_REVEAL_DELAY_MS);
     expect(nextState.resolvedShipCount).toBe(1);
     logSpy.mockRestore();
   });

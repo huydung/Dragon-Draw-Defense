@@ -172,6 +172,7 @@ function applyBreaches(state, nowMs, config) {
       islandHitCount: (nextState.islandHitCount ?? 0) + 1,
       resolvedShipCount: nextState.resolvedShipCount + 1,
       damageFlashUntilMs: nowMs + config.RENDER.DAMAGE_FLASH_DURATION_MS,
+      gameOverDialogAtMs: nextState.gameOver ? nowMs + config.RENDER.GAME_OVER_REVEAL_DELAY_MS : 0,
       ships: nextState.ships.map((ship) => (ship.id === shipId ? { ...ship, active: false, breached: true } : ship))
     };
   }

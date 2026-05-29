@@ -57,11 +57,11 @@ export const GAME_CONFIG = {
       Prism: { x: 56, y: 379 }
     },
     ACTIVE_DRAGON_POSITIONS: [
-      { x: 48, y: 112 },
-      { x: 48, y: 176 },
-      { x: 48, y: 240 },
-      { x: 48, y: 304 },
-      { x: 48, y: 368 }
+      { x: 48, y: 126 },
+      { x: 48, y: 190 },
+      { x: 48, y: 254 },
+      { x: 48, y: 318 },
+      { x: 48, y: 382 }
     ],
     SHIP_WIDTH: 96,
     SHIP_HEIGHT: 64,
@@ -343,6 +343,7 @@ export const GAME_CONFIG = {
     EXPLOSION_PARTICLE_COUNT: 34,
     EXPLOSION_PARTICLE_DISTANCE: 72,
     DAMAGE_FLASH_DURATION_MS: 220,
+    GAME_OVER_REVEAL_DELAY_MS: 1400,
     FEEDBACK_DURATION_MS: 1200,
     CANVAS_BORDER_WIDTH: 1,
     HUD_HEART: "♥"
