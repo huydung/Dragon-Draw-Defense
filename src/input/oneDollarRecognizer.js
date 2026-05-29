@@ -11,16 +11,20 @@ export class OneDollarRecognizer {
     }));
   }
 
-  recognize(rawPoints) {
+  recognize(rawPoints, candidateNames = null) {
     if (rawPoints.length < this.config.GESTURES.MIN_STROKE_POINTS) {
-      return { name: null, score: 0, accepted: false };
+      return { name: null, score: 0, accepted: false, ambiguous: false, candidates: [] };
     }
 
     const candidate = normalizePath(rawPoints, this.config);
-    let bestTemplate = null;
-    let bestDistance = Number.POSITIVE_INFINITY;
+    const allowedNames = candidateNames ? new Set(candidateNames) : null;
+    const scoredCandidates = [];
 
     for (const template of this.templates) {
+      if (allowedNames && !allowedNames.has(template.name)) {
+        continue;
+      }
+
       const distance = distanceAtBestAngle(
         candidate,
         template.points,
@@ -29,22 +33,30 @@ export class OneDollarRecognizer {
         this.config.GESTURES.DOLLAR_ANGLE_PRECISION_RADIANS,
         this.config
       );
+      const score = scoreDistance(distance, this.config);
 
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestTemplate = template;
-      }
+      scoredCandidates.push({
+        name: template.name,
+        score,
+        distance
+      });
     }
 
-    const halfDiagonal =
-      0.5 * Math.sqrt(this.config.GESTURES.DOLLAR_SQUARE_SIZE ** 2 + this.config.GESTURES.DOLLAR_SQUARE_SIZE ** 2);
-    const score = Math.max(0, 1 - bestDistance / halfDiagonal);
-    const accepted = score >= this.config.GESTURES.GESTURE_ACCEPTANCE_THRESHOLD;
+    scoredCandidates.sort((first, second) => first.distance - second.distance);
+    const bestCandidate = scoredCandidates[0] ?? null;
+    const secondCandidate = scoredCandidates[1] ?? null;
+    const score = bestCandidate?.score ?? 0;
+    const margin = secondCandidate ? score - secondCandidate.score : Number.POSITIVE_INFINITY;
+    const ambiguous = margin < this.config.GESTURES.GESTURE_AMBIGUITY_MARGIN;
+    const accepted = Boolean(bestCandidate) && score >= this.config.GESTURES.GESTURE_ACCEPTANCE_THRESHOLD && !ambiguous;
 
     return {
-      name: bestTemplate?.name ?? null,
+      name: bestCandidate?.name ?? null,
       score,
-      accepted
+      accepted,
+      ambiguous,
+      margin,
+      candidates: scoredCandidates
     };
   }
 }
@@ -150,6 +162,12 @@ function distanceAtBestAngle(points, template, minAngle, maxAngle, threshold, co
 
 function distanceAtAngle(points, template, radians) {
   return pathDistance(rotateBy(points, radians), template);
+}
+
+function scoreDistance(distance, config) {
+  const halfDiagonal =
+    0.5 * Math.sqrt(config.GESTURES.DOLLAR_SQUARE_SIZE ** 2 + config.GESTURES.DOLLAR_SQUARE_SIZE ** 2);
+  return Math.max(0, 1 - distance / halfDiagonal);
 }
 
 function pathDistance(points, template) {

@@ -51,16 +51,17 @@ const input = new GestureInput(canvas, {
       return;
     }
 
-    const result = recognizer.recognize(points);
+    const result = recognizer.recognize(points, gameState.activeElements);
     const percent = (result.score * 100).toFixed(1);
 
     if (!result.accepted) {
-      console.log(`[INPUT:RECOGNIZED] Rejected '${result.name ?? "Unknown"}' with ${percent}% accuracy.`);
+      const reason = result.ambiguous ? "ambiguous" : "low-confidence";
+      console.log(`[INPUT:RECOGNIZED] Rejected '${result.name ?? "Unknown"}' with ${percent}% accuracy (${reason}).`);
       gameState = {
         ...gameState,
         feedback: {
           kind: "fail",
-          text: `Gesture rejected ${percent}%`,
+          text: result.ambiguous ? `Gesture ambiguous ${percent}%` : `Gesture rejected ${percent}%`,
           untilMs: performance.now() + GAME_CONFIG.RENDER.FEEDBACK_DURATION_MS
         }
       };

@@ -35,6 +35,8 @@ const elements = {
   deletePoint: document.querySelector("#delete-point"),
   templateEditStatus: document.querySelector("#template-edit-status"),
   matchResult: document.querySelector("#match-result"),
+  riskSummary: document.querySelector("#risk-summary"),
+  riskGrid: document.querySelector("#risk-grid"),
   saveConfig: document.querySelector("#save-config"),
   saveStatus: document.querySelector("#save-status")
 };
@@ -372,6 +374,7 @@ function render() {
   renderShapeList();
   renderEditor();
   renderMatch();
+  renderRiskGrid();
   renderCanvases();
   elements.saveStatus.textContent = state.status;
 }
@@ -426,6 +429,83 @@ function renderMatch() {
     ? `Matched ${state.match.name} at ${percent}%`
     : `Rejected ${state.match.name ?? "Unknown"} at ${percent}%`;
   elements.matchResult.dataset.kind = state.match.accepted ? "match" : "fail";
+}
+
+function renderRiskGrid() {
+  const riskRows = createRiskRows();
+  const riskyRows = riskRows.filter((row) => row.kind !== "safe");
+  const highestRisk = riskRows[0];
+
+  elements.riskSummary.textContent = highestRisk
+    ? `${highestRisk.source} vs ${highestRisk.target}: ${(highestRisk.score * 100).toFixed(1)}%`
+    : "No comparable pairs";
+
+  elements.riskGrid.replaceChildren(
+    ...riskRows.map((row) => {
+      const item = document.createElement("button");
+      const pair = document.createElement("span");
+      const score = document.createElement("strong");
+      item.type = "button";
+      item.className = "risk-row";
+      item.dataset.kind = row.kind;
+      item.dataset.selected = row.source === state.selectedName || row.target === state.selectedName ? "true" : "false";
+      item.addEventListener("click", () => {
+        state = {
+          ...state,
+          selectedName: row.source,
+          status: `Selected ${row.source}. ${row.target} cross-scores at ${(row.score * 100).toFixed(1)}%.`
+        };
+        selectedPointIndex = null;
+        render();
+      });
+
+      pair.textContent = `${row.source} -> ${row.target}`;
+      score.textContent = `${(row.score * 100).toFixed(1)}%`;
+      item.append(pair, score);
+      return item;
+    })
+  );
+
+  elements.riskGrid.dataset.empty = riskyRows.length === 0 ? "true" : "false";
+}
+
+function createRiskRows() {
+  const names = Object.keys(state.templates);
+  const rows = [];
+
+  names.forEach((sourceName) => {
+    names.forEach((targetName) => {
+      if (sourceName === targetName) {
+        return;
+      }
+
+      const result = recognizer.recognize(toPointObjects(state.templates[sourceName]), [targetName]);
+      rows.push({
+        source: sourceName,
+        target: targetName,
+        score: result.score,
+        kind: getRiskKind(result.score)
+      });
+    });
+  });
+
+  return rows.sort((first, second) => second.score - first.score);
+}
+
+function getRiskKind(score) {
+  if (score >= GAME_CONFIG.GESTURES.GESTURE_ACCEPTANCE_THRESHOLD) {
+    return "danger";
+  }
+
+  if (score >= GAME_CONFIG.GESTURES.GESTURE_ACCEPTANCE_THRESHOLD - GAME_CONFIG.GESTURES.GESTURE_AMBIGUITY_MARGIN * 2) {
+    return "warn";
+  }
+
+  return "safe";
+}
+
+function toPointObjects(points) {
+  return points.map(([x, y]) => ({ x, y }));
 }
 
 function updateStatus(status) {

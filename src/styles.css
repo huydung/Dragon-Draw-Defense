@@ -55,6 +55,7 @@ textarea {
   gap: var(--hud-gap);
   min-height: var(--hud-height);
   align-items: center;
+  pointer-events: none;
 }
 
 .hud-panel {

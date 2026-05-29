@@ -141,7 +141,7 @@ button:disabled {
 
 #sandbox-stage-panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: var(--hud-gap);
 }
 
@@ -206,6 +206,59 @@ button:disabled {
 
 #match-result[data-kind="fail"] {
   color: var(--failure-color);
+}
+
+#risk-panel {
+  min-height: 0;
+  display: grid;
+  gap: var(--hud-gap);
+}
+
+#risk-summary {
+  color: var(--muted-text-color);
+  font-size: 0.9rem;
+}
+
+#risk-grid {
+  max-height: calc(var(--hud-height) * 4);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: calc(var(--hud-gap) / 2);
+  overflow: auto;
+}
+
+#risk-grid[data-empty="true"]::before {
+  content: "No risky pairs above the warning band.";
+  color: var(--muted-text-color);
+}
+
+.risk-row {
+  min-height: calc(var(--hud-height) * 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hud-gap);
+  padding-inline: var(--hud-gap);
+  font-size: 0.85rem;
+}
+
+.risk-row[data-kind="safe"] {
+  border-color: color-mix(in srgb, var(--accent-color), transparent 70%);
+  opacity: 0.68;
+}
+
+.risk-row[data-kind="warn"] {
+  border-color: #f7d774;
+  color: #f7d774;
+}
+
+.risk-row[data-kind="danger"] {
+  border-color: var(--failure-color);
+  color: var(--failure-color);
+}
+
+.risk-row[data-selected="true"] {
+  background: color-mix(in srgb, var(--accent-color), transparent 82%);
 }
 
 label {
