@@ -17,7 +17,7 @@ export class CanvasRenderer {
     this.resizeCanvas();
   }
 
-  render(state, trail, nowMs) {
+  render(state, trailState, nowMs) {
     this.renderHud(state);
     this.renderWaveBanner();
     this.renderGameOver(state);
@@ -28,7 +28,7 @@ export class CanvasRenderer {
     this.drawDragons(state.activeElements);
     this.drawShips(state.ships, nowMs);
     this.drawLasers(state.lasers, nowMs);
-    this.drawTrail(trail, nowMs);
+    this.drawTrail(trailState, nowMs);
     this.drawWaveSelectionDialog(state, nowMs);
     this.renderFeedback(state.feedback);
   }
@@ -398,19 +398,14 @@ export class CanvasRenderer {
     });
   }
 
-  drawDragonPortrait(name, centerX, centerY, size, strokeColor) {
+  drawDragonPortrait(name, centerX, centerY, size) {
     const image = this.dragonImages[name];
-    const radius = size / 2;
+    const halfSize = size / 2;
 
     this.ctx.save();
-    this.ctx.beginPath();
-    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    this.ctx.clip();
-    this.ctx.fillStyle = this.config.RENDER.COLORS.DRAGON_FILL;
-    this.ctx.fillRect(centerX - radius, centerY - radius, size, size);
 
     if (image?.complete && image.naturalWidth > 0) {
-      this.ctx.drawImage(image, centerX - radius, centerY - radius, size, size);
+      this.ctx.drawImage(image, centerX - halfSize, centerY - halfSize, size, size);
     } else {
       this.ctx.fillStyle = this.config.RENDER.COLORS.TEXT;
       this.ctx.font = `700 ${Math.round(size * 0.34)}px ${this.config.UI.FONT_FAMILY}`;
@@ -419,15 +414,6 @@ export class CanvasRenderer {
       this.ctx.fillText(this.config.ELEMENTS[name]?.label ?? "?", centerX, centerY);
     }
 
-    this.ctx.restore();
-    this.ctx.save();
-    this.ctx.strokeStyle = strokeColor;
-    this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH * 2;
-    this.ctx.shadowColor = strokeColor;
-    this.ctx.shadowBlur = this.config.UI.HUD_GAP_PX;
-    this.ctx.beginPath();
-    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    this.ctx.stroke();
     this.ctx.restore();
   }
 
@@ -472,7 +458,8 @@ export class CanvasRenderer {
     }
   }
 
-  drawTrail(trail, nowMs) {
+  drawTrail(trailState, nowMs) {
+    const trail = trailState?.points ?? [];
     if (trail.length < this.config.GESTURES.MIN_STROKE_POINTS) {
       return;
     }
@@ -485,7 +472,7 @@ export class CanvasRenderer {
 
     for (let index = 1; index < trail.length; index += 1) {
       const ageMs = nowMs - trail[index].createdAtMs;
-      const alpha = Math.max(0, 1 - ageMs / this.config.GESTURES.TRAIL_FADE_DURATION_MS);
+      const alpha = trailState.isDrawing ? 1 : Math.max(0, 1 - ageMs / this.config.GESTURES.TRAIL_FADE_DURATION_MS);
       this.ctx.globalAlpha = alpha;
       this.ctx.strokeStyle = this.config.GESTURES.TRAIL_COLOR;
       this.ctx.lineWidth = this.config.GESTURES.TRAIL_WIDTH;

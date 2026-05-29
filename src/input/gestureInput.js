@@ -22,8 +22,14 @@ export class GestureInput {
 
   getTrail(nowMs) {
     const fadeMs = this.config.GESTURES.TRAIL_FADE_DURATION_MS;
-    this.trail = this.trail.filter((point) => nowMs - point.createdAtMs <= fadeMs);
-    return this.trail;
+    if (!this.isDrawing) {
+      this.trail = this.trail.filter((point) => nowMs - point.createdAtMs <= fadeMs);
+    }
+
+    return {
+      points: this.trail,
+      isDrawing: this.isDrawing
+    };
   }
 
   getCurrentStroke() {
@@ -35,6 +41,7 @@ export class GestureInput {
     this.activePointerId = event.pointerId;
     this.isDrawing = true;
     this.points = [];
+    this.trail = [];
     const point = this.toVirtualPoint(event);
     this.recordPoint(point, event.timeStamp);
   };
@@ -62,6 +69,7 @@ export class GestureInput {
     this.activePointerId = null;
     const finalPoint = this.toVirtualPoint(event);
     this.recordPoint(finalPoint, event.timeStamp);
+    this.trail = this.trail.map((point) => ({ ...point, createdAtMs: event.timeStamp }));
     this.handlers.onCommit(this.points.map((point) => ({ x: point.x, y: point.y })));
   };
 
