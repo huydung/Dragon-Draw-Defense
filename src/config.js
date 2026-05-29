@@ -256,7 +256,6 @@ export const GAME_CONFIG = {
     SHIP_BADGE_OFFSET_Y: 28,
     SHIP_NOSE_WIDTH: 16,
     SHIP_VARIANT_PATHS: ["/ships/ship-base-1.png", "/ships/ship-base-2.png", "/ships/ship-base-3.png"],
-    FLIPPED_SHIP_VARIANT_INDICES: [2],
     SHIP_FLAG_OFFSET_X: -4,
     SHIP_FLAG_OFFSET_Y: -18,
     SHIP_FLAG_WIDTH: 42,

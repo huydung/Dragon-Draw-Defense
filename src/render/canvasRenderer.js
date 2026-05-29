@@ -202,13 +202,7 @@ export class CanvasRenderer {
 
     this.ctx.save();
     if (image?.complete && image.naturalWidth > 0) {
-      if (this.config.RENDER.FLIPPED_SHIP_VARIANT_INDICES.includes(variantIndex % this.shipImages.length)) {
-        this.ctx.translate(left + this.config.PLAYFIELD.SHIP_WIDTH, top);
-        this.ctx.scale(-1, 1);
-        this.ctx.drawImage(image, 0, 0, this.config.PLAYFIELD.SHIP_WIDTH, this.config.PLAYFIELD.SHIP_HEIGHT);
-      } else {
-        this.ctx.drawImage(image, left, top, this.config.PLAYFIELD.SHIP_WIDTH, this.config.PLAYFIELD.SHIP_HEIGHT);
-      }
+      this.ctx.drawImage(image, left, top, this.config.PLAYFIELD.SHIP_WIDTH, this.config.PLAYFIELD.SHIP_HEIGHT);
     } else {
       this.drawFallbackShip(left, top, ship.y);
     }
