@@ -9,6 +9,7 @@ export class CanvasRenderer {
     this.config = config;
     this.shipImages = this.loadShipImages();
     this.dragonImages = this.loadDragonImages();
+    this.backgroundImage = this.loadImage(this.config.RENDER.BACKGROUND_IMAGE_PATH);
     this.resizeObserver = new ResizeObserver(this.resizeCanvas);
   }
 
@@ -25,7 +26,7 @@ export class CanvasRenderer {
     this.drawBackground();
     this.drawDamageFlash(state, nowMs);
     this.drawDefenseLine();
-    this.drawDragons(state.activeElements);
+    this.drawDragons(state.activeElements, state.lasers, nowMs);
     this.drawShips(state.ships, nowMs);
     this.drawLasers(state.lasers, nowMs);
     this.drawTrail(trailState, nowMs);
@@ -39,6 +40,12 @@ export class CanvasRenderer {
       image.src = path;
       return image;
     });
+  }
+
+  loadImage(path) {
+    const image = new Image();
+    image.src = path;
+    return image;
   }
 
   loadDragonImages() {
@@ -125,20 +132,38 @@ export class CanvasRenderer {
 
   drawBackground() {
     const colors = this.config.RENDER.COLORS;
-    const gradient = this.ctx.createLinearGradient(0, 0, 0, this.config.PLAYFIELD.VIRTUAL_HEIGHT);
-    gradient.addColorStop(0, colors.PLAYFIELD_TOP);
-    gradient.addColorStop(1, colors.PLAYFIELD_BOTTOM);
-    this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(0, 0, this.config.PLAYFIELD.VIRTUAL_WIDTH, this.config.PLAYFIELD.VIRTUAL_HEIGHT);
+    const width = this.config.PLAYFIELD.VIRTUAL_WIDTH;
+    const height = this.config.PLAYFIELD.VIRTUAL_HEIGHT;
+
+    if (this.backgroundImage?.complete && this.backgroundImage.naturalWidth > 0) {
+      this.drawCoverImage(this.backgroundImage, 0, 0, width, height);
+      this.ctx.fillStyle = "rgba(5, 13, 23, 0.58)";
+      this.ctx.fillRect(0, 0, width, height);
+    } else {
+      const gradient = this.ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, colors.PLAYFIELD_TOP);
+      gradient.addColorStop(1, colors.PLAYFIELD_BOTTOM);
+      this.ctx.fillStyle = gradient;
+      this.ctx.fillRect(0, 0, width, height);
+    }
 
     this.ctx.strokeStyle = colors.GRID_LINE;
     this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH;
-    for (let x = 0; x <= this.config.PLAYFIELD.VIRTUAL_WIDTH; x += this.config.RENDER.BACKGROUND_GRID_STEP) {
-      this.drawLine({ x, y: 0 }, { x, y: this.config.PLAYFIELD.VIRTUAL_HEIGHT });
+    for (let x = 0; x <= width; x += this.config.RENDER.BACKGROUND_GRID_STEP) {
+      this.drawLine({ x, y: 0 }, { x, y: height });
     }
-    for (let y = 0; y <= this.config.PLAYFIELD.VIRTUAL_HEIGHT; y += this.config.RENDER.BACKGROUND_GRID_STEP) {
-      this.drawLine({ x: 0, y }, { x: this.config.PLAYFIELD.VIRTUAL_WIDTH, y });
+    for (let y = 0; y <= height; y += this.config.RENDER.BACKGROUND_GRID_STEP) {
+      this.drawLine({ x: 0, y }, { x: width, y });
     }
+  }
+
+  drawCoverImage(image, x, y, width, height) {
+    const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+    const sourceWidth = width / scale;
+    const sourceHeight = height / scale;
+    const sourceX = (image.naturalWidth - sourceWidth) / 2;
+    const sourceY = (image.naturalHeight - sourceHeight) / 2;
+    this.ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
   }
 
   drawDefenseLine() {
@@ -170,7 +195,7 @@ export class CanvasRenderer {
     this.ctx.restore();
   }
 
-  drawDragons(activeElements = []) {
+  drawDragons(activeElements = [], lasers = [], nowMs = 0) {
     activeElements.forEach((name, index) => {
       const element = this.config.ELEMENTS[name];
       const position = this.config.PLAYFIELD.ACTIVE_DRAGON_POSITIONS[index];
@@ -179,15 +204,61 @@ export class CanvasRenderer {
         return;
       }
 
+      const idle = this.getDragonIdleMotion(index, nowMs);
+      const attack = this.getDragonAttackMotion(position, lasers, nowMs);
+      const attackPulse = attack?.pulse ?? 0;
+      const drawX = position.x + idle.x + attackPulse * this.config.RENDER.DRAGON_ATTACK_LUNGE_PX;
+      const drawY = position.y + idle.y - attackPulse * this.config.RENDER.DRAGON_ATTACK_LIFT_PX;
+      const scale = 1 + attackPulse * this.config.RENDER.DRAGON_ATTACK_SCALE;
+      const rotation = idle.rotation + attackPulse * 0.12;
+
       this.ctx.save();
-      this.drawDragonPortrait(name, position.x, position.y, this.config.RENDER.DRAGON_IMAGE_SIZE, element.color);
+      this.ctx.translate(drawX, drawY);
+      this.ctx.rotate(rotation);
+      this.ctx.scale(scale, scale);
+      this.drawDragonPortrait(name, 0, 0, this.config.RENDER.DRAGON_IMAGE_SIZE, element.color);
+      this.ctx.restore();
+
+      this.ctx.save();
       this.ctx.font = `${this.config.UI.PANEL_RADIUS_PX + this.config.RENDER.CANVAS_BORDER_WIDTH}px ${this.config.UI.FONT_FAMILY}`;
       this.ctx.fillStyle = this.config.RENDER.COLORS.MUTED_TEXT;
       this.ctx.textAlign = "center";
       this.ctx.textBaseline = "middle";
-      this.ctx.fillText(name, position.x, position.y + this.config.RENDER.DRAGON_IMAGE_SIZE / 2 + this.config.UI.HUD_GAP_PX);
+      this.ctx.fillText(
+        name,
+        position.x + idle.x * 0.35,
+        position.y + this.config.RENDER.DRAGON_IMAGE_SIZE / 2 + this.config.UI.HUD_GAP_PX + idle.y * 0.35
+      );
       this.ctx.restore();
     });
+  }
+
+  getDragonIdleMotion(index, nowMs) {
+    const phase = nowMs * 0.0024 + index * 1.37;
+    return {
+      x: Math.sin(phase * 0.8) * 1.2,
+      y: Math.sin(phase) * this.config.RENDER.DRAGON_IDLE_BOB_PX,
+      rotation: Math.sin(phase * 0.7) * this.config.RENDER.DRAGON_IDLE_SWAY_RADIANS
+    };
+  }
+
+  getDragonAttackMotion(position, lasers, nowMs) {
+    const laser = lasers.find((candidate) => {
+      const deltaX = Math.abs(candidate.from.x - position.x);
+      const deltaY = Math.abs(candidate.from.y - position.y);
+      return candidate.expiresAtMs > nowMs && deltaX < 1 && deltaY < 1;
+    });
+
+    if (!laser) {
+      return null;
+    }
+
+    const remainingMs = laser.expiresAtMs - nowMs;
+    const progress = 1 - Math.max(0, Math.min(1, remainingMs / this.config.RENDER.LASER_DURATION_MS));
+    return {
+      progress,
+      pulse: Math.sin(progress * Math.PI)
+    };
   }
 
   drawShips(ships, nowMs) {

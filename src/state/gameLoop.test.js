@@ -8,7 +8,9 @@ describe("Milestone 3 wave survival loop", () => {
     expect(getWaveShipCount(1)).toBe(5);
     expect(getWaveShipCount(2)).toBe(8);
     expect(getWaveShipCount(3)).toBe(12);
-    expect(getWaveShipCount(5)).toBe(14);
+    expect(getWaveShipCount(5)).toBe(
+      GAME_CONFIG.WAVES.WAVE_3_SHIP_COUNT + (5 - 3) * GAME_CONFIG.WAVES.WAVE_AFTER_3_SHIP_INCREMENT
+    );
   });
 
   test("starts with a transition banner phase before spawning", () => {

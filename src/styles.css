@@ -24,9 +24,22 @@ body {
   background: var(--page-background);
 }
 
+body::before {
+  content: "";
+  position: fixed;
+  inset: -18px;
+  background-image: linear-gradient(rgba(6, 12, 22, 0.7), rgba(6, 12, 22, 0.8)), var(--background-art);
+  background-position: center;
+  background-size: cover;
+  filter: blur(10px) saturate(0.92);
+  transform: scale(1.04);
+}
+
 #app {
   display: grid;
   place-items: center;
+  position: relative;
+  z-index: 1;
 }
 
 button,
@@ -90,7 +103,7 @@ textarea {
   border: var(--panel-border-width) solid color-mix(in srgb, var(--accent-color), transparent 45%);
   border-radius: var(--panel-radius);
   touch-action: none;
-  cursor: crosshair;
+  cursor: var(--canvas-cursor);
 }
 
 #feedback {
@@ -179,11 +192,15 @@ textarea {
   color: var(--muted-text-color);
 }
 
-#restart-game {
+#restart-game,
+#sandbox-link,
+#audio-toggle {
   min-height: var(--hud-height);
   border: var(--panel-border-width) solid color-mix(in srgb, var(--accent-color), transparent 40%);
   border-radius: var(--button-radius);
   background: var(--accent-color);
+  background-image: linear-gradient(rgba(0, 255, 204, 0.16), rgba(0, 255, 204, 0.08)), var(--button-art);
+  background-size: 100% 100%;
   color: var(--page-background);
   font-weight: 900;
   cursor: pointer;
@@ -227,15 +244,22 @@ textarea {
   z-index: 4;
   right: var(--sandbox-offset);
   bottom: var(--sandbox-offset);
-  min-height: var(--hud-height);
   display: grid;
   place-items: center;
   padding-inline: var(--hud-gap);
-  border: var(--panel-border-width) solid color-mix(in srgb, var(--accent-color), transparent 45%);
-  border-radius: var(--button-radius);
-  background: var(--panel-background);
   color: var(--text-color);
-  font-weight: 800;
   text-decoration: none;
-  cursor: pointer;
+}
+
+#audio-toggle {
+  position: absolute;
+  z-index: 4;
+  right: calc(var(--sandbox-offset) + 92px);
+  bottom: var(--sandbox-offset);
+  padding-inline: var(--hud-gap);
+  color: var(--text-color);
+}
+
+#audio-toggle[aria-pressed="false"] {
+  opacity: 0.68;
 }

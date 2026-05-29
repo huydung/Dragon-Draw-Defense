@@ -12,6 +12,16 @@ const DRAGON_IMAGE_PATHS = {
   Prism: new URL("./assets/dragons/Prism_Cosmic_Prism_Dragon.png", import.meta.url).href
 };
 const PUBLIC_ASSET_BASE = import.meta.env?.BASE_URL ?? "/";
+const PUBLIC_ASSET_PATHS = {
+  background: `${PUBLIC_ASSET_BASE}ui/playfield-pirates.jpg`,
+  cursor: `${PUBLIC_ASSET_BASE}ui/crosshair-blue.png`,
+  button: `${PUBLIC_ASSET_BASE}ui/button-long-blue.png`,
+  music: `${PUBLIC_ASSET_BASE}audio/dragon-defense-loop.ogg`,
+  strike: `${PUBLIC_ASSET_BASE}audio/dragon-strike.ogg`,
+  burst: `${PUBLIC_ASSET_BASE}audio/ship-burst.ogg`,
+  click: `${PUBLIC_ASSET_BASE}audio/ui-click.ogg`,
+  runEnd: `${PUBLIC_ASSET_BASE}audio/run-end.ogg`
+};
 
 export const GAME_CONFIG = {
   PLAYFIELD: {
@@ -252,6 +262,9 @@ export const GAME_CONFIG = {
       LASER_GLOW: "rgba(255, 229, 129, 0.42)"
     },
     BACKGROUND_GRID_STEP: 40,
+    BACKGROUND_IMAGE_PATH: PUBLIC_ASSET_PATHS.background,
+    CURSOR_IMAGE_PATH: PUBLIC_ASSET_PATHS.cursor,
+    BUTTON_IMAGE_PATH: PUBLIC_ASSET_PATHS.button,
     DEFENSE_LINE_DASH: [8, 8],
     DEFENSE_LABEL_Y: 72,
     SHIP_BADGE_OFFSET_Y: 28,
@@ -273,6 +286,11 @@ export const GAME_CONFIG = {
     DRAGON_IMAGE_PATHS,
     DRAGON_IMAGE_SIZE: 46,
     DRAGON_SELECTION_IMAGE_SIZE: 32,
+    DRAGON_IDLE_BOB_PX: 3,
+    DRAGON_IDLE_SWAY_RADIANS: 0.06,
+    DRAGON_ATTACK_LUNGE_PX: 18,
+    DRAGON_ATTACK_LIFT_PX: 6,
+    DRAGON_ATTACK_SCALE: 0.2,
     SELECTION_DIALOG_WIDTH: 500,
     SELECTION_DIALOG_HEIGHT: 320,
     SELECTION_DIALOG_TOP: 74,
@@ -295,6 +313,27 @@ export const GAME_CONFIG = {
     FEEDBACK_DURATION_MS: 1200,
     CANVAS_BORDER_WIDTH: 1,
     HUD_HEART: "♥"
+  },
+
+  AUDIO: {
+    MUSIC: PUBLIC_ASSET_PATHS.music,
+    SFX: {
+      strike: PUBLIC_ASSET_PATHS.strike,
+      burst: PUBLIC_ASSET_PATHS.burst,
+      click: PUBLIC_ASSET_PATHS.click,
+      reject: PUBLIC_ASSET_PATHS.click,
+      runEnd: PUBLIC_ASSET_PATHS.runEnd
+    },
+    VOLUMES: {
+      MUSIC: 0.18,
+      SFX: 0.55,
+      STRIKE: 0.44,
+      BURST: 0.5,
+      CLICK: 0.28,
+      REJECT: 0.22,
+      RUNEND: 0.42
+    },
+    STRIKE_BURST_DELAY_MS: 90
   },
 
   UI: {

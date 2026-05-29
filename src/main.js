@@ -1,4 +1,5 @@
 import { GAME_CONFIG } from "./config.js";
+import { GameAudio } from "./audio/gameAudio.js";
 import { GestureInput } from "./input/gestureInput.js";
 import { OneDollarRecognizer } from "./input/oneDollarRecognizer.js";
 import { CanvasRenderer } from "./render/canvasRenderer.js";
@@ -9,6 +10,7 @@ import "./styles.css";
 
 const canvas = document.querySelector("#game-canvas");
 const restartButton = document.querySelector("#restart-game");
+const audioButton = document.querySelector("#audio-toggle");
 
 const renderer = new CanvasRenderer(canvas, {
   health: document.querySelector("#health"),
@@ -24,6 +26,7 @@ const renderer = new CanvasRenderer(canvas, {
   highScoreList: document.querySelector("#high-score-list")
 });
 const recognizer = new OneDollarRecognizer();
+const audio = new GameAudio(GAME_CONFIG, { button: audioButton });
 let highScores = loadHighScores();
 let gameState = {
   ...createInitialGameState(GAME_CONFIG, Math.random, performance.now()),
@@ -31,7 +34,8 @@ let gameState = {
 };
 window.__VIKING_RAID_SENTRY__ = {
   config: GAME_CONFIG,
-  getState: () => structuredClone(gameState)
+  getState: () => structuredClone(gameState),
+  audio
 };
 
 document.documentElement.style.setProperty("--page-background", GAME_CONFIG.RENDER.COLORS.PAGE_BACKGROUND);
@@ -53,6 +57,13 @@ document.documentElement.style.setProperty("--button-radius", `${GAME_CONFIG.UI.
 document.documentElement.style.setProperty("--sandbox-width", `${GAME_CONFIG.UI.SANDBOX_WIDTH_PX}px`);
 document.documentElement.style.setProperty("--sandbox-textarea-height", `${GAME_CONFIG.UI.SANDBOX_TEXTAREA_HEIGHT_PX}px`);
 document.documentElement.style.setProperty("--sandbox-offset", `${GAME_CONFIG.UI.SANDBOX_OFFSET_PX}px`);
+document.documentElement.style.setProperty("--background-art", `url("${GAME_CONFIG.RENDER.BACKGROUND_IMAGE_PATH}")`);
+document.documentElement.style.setProperty("--canvas-cursor", `url("${GAME_CONFIG.RENDER.CURSOR_IMAGE_PATH}") 16 16, crosshair`);
+document.documentElement.style.setProperty("--button-art", `url("${GAME_CONFIG.RENDER.BUTTON_IMAGE_PATH}")`);
+
+document.addEventListener("pointerdown", () => audio.unlock(), { passive: true });
+document.addEventListener("keydown", () => audio.unlock(), { passive: true });
+audioButton?.addEventListener("click", () => audio.toggle());
 
 const input = new GestureInput(canvas, {
   onCommit(points) {
@@ -74,17 +85,26 @@ const input = new GestureInput(canvas, {
           untilMs: performance.now() + GAME_CONFIG.RENDER.FEEDBACK_DURATION_MS
         }
       };
+      audio.play("reject");
       return;
     }
 
     console.log(`[INPUT:RECOGNIZED] Matched '${result.name}' with ${percent}% accuracy.`);
-    gameState = applyGlyphStrike(gameState, result, performance.now());
+    const previousDefeatedShipCount = gameState.defeatedShipCount ?? 0;
+    const nextState = applyGlyphStrike(gameState, result, performance.now());
+    if ((nextState.defeatedShipCount ?? 0) > previousDefeatedShipCount) {
+      audio.playStrike();
+    } else {
+      audio.play("reject");
+    }
+    gameState = nextState;
   }
 });
 
 renderer.start();
 input.start();
 restartButton.addEventListener("click", () => {
+  audio.play("click");
   gameState = {
     ...restartGame(performance.now()),
     highScores
@@ -97,6 +117,7 @@ function tick(nowMs) {
   gameState = pruneTransientState(gameState, nowMs);
 
   if (gameState.gameOver && !gameState.scoreRecordedAtMs) {
+    audio.play("runEnd");
     const entry = createHighScoreEntry(gameState);
     highScores = insertHighScore(highScores, entry);
     saveHighScores(highScores);
