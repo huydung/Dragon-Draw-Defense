@@ -103,11 +103,13 @@ function spawnDueShips(state, nowMs, rng, config) {
     const weakness = nextState.activeElements[nextState.spawnedShipCount % nextState.activeElements.length];
     const y = randomBetween(config.PLAYFIELD.SHIP_MIN_Y, config.PLAYFIELD.SHIP_MAX_Y, rng);
     const shipNumber = nextState.spawnedShipCount + 1;
+    const variantIndex = (shipNumber - 1) % config.RENDER.SHIP_VARIANT_PATHS.length;
     const ship = {
       id: `wave-${nextState.wave}-ship-${shipNumber}`,
       x: config.PLAYFIELD.SHIP_SPAWN_X,
       y,
       weakness,
+      variantIndex,
       speed: nextState.shipSpeed,
       active: true
     };

@@ -1,4 +1,5 @@
 import { GAME_CONFIG } from "../config.js";
+import { createAnimatedTemplatePath, getTemplateBounds, scaleTemplatePoint } from "./glyphTemplateAnimation.js";
 
 export class CanvasRenderer {
   constructor(canvas, hudElements, config = GAME_CONFIG) {
@@ -6,6 +7,7 @@ export class CanvasRenderer {
     this.ctx = canvas.getContext("2d");
     this.hudElements = hudElements;
     this.config = config;
+    this.shipImages = this.loadShipImages();
     this.resizeObserver = new ResizeObserver(this.resizeCanvas);
   }
 
@@ -16,17 +18,26 @@ export class CanvasRenderer {
 
   render(state, trail, nowMs) {
     this.renderHud(state);
-    this.renderWaveBanner(state, nowMs);
+    this.renderWaveBanner();
     this.renderGameOver(state);
     this.clear();
     this.drawBackground();
     this.drawDamageFlash(state, nowMs);
     this.drawDefenseLine();
     this.drawDragons(state.activeElements);
-    this.drawShips(state.ships);
+    this.drawShips(state.ships, nowMs);
     this.drawLasers(state.lasers);
     this.drawTrail(trail, nowMs);
+    this.drawWaveSelectionDialog(state, nowMs);
     this.renderFeedback(state.feedback);
+  }
+
+  loadShipImages() {
+    return this.config.RENDER.SHIP_VARIANT_PATHS.map((path) => {
+      const image = new Image();
+      image.src = path;
+      return image;
+    });
   }
 
   resizeCanvas = () => {
@@ -49,13 +60,12 @@ export class CanvasRenderer {
     element.dataset.kind = feedback?.kind ?? "";
   }
 
-  renderWaveBanner(state, nowMs) {
+  renderWaveBanner() {
     if (!this.hudElements.waveBanner) {
       return;
     }
 
-    this.hudElements.waveBanner.textContent =
-      state.phase === "transition" && nowMs < state.transitionUntilMs ? `WAVE ${state.wave} START` : "";
+    this.hudElements.waveBanner.textContent = "";
   }
 
   renderGameOver(state) {
@@ -119,11 +129,15 @@ export class CanvasRenderer {
   }
 
   drawDragons(activeElements = []) {
-    Object.entries(this.config.ELEMENTS).forEach(([name, element]) => {
-      const position = this.config.PLAYFIELD.DRAGON_POSITIONS[name];
-      const isWaveActive = activeElements.includes(name);
+    activeElements.forEach((name, index) => {
+      const element = this.config.ELEMENTS[name];
+      const position = this.config.PLAYFIELD.ACTIVE_DRAGON_POSITIONS[index];
+
+      if (!element || !position) {
+        return;
+      }
+
       this.ctx.save();
-      this.ctx.globalAlpha = isWaveActive ? 1 : 0.42;
       this.ctx.fillStyle = this.config.RENDER.COLORS.DRAGON_FILL;
       this.ctx.strokeStyle = element.color;
       this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH + this.config.RENDER.CANVAS_BORDER_WIDTH;
@@ -143,16 +157,27 @@ export class CanvasRenderer {
     });
   }
 
-  drawShips(ships) {
-    ships.filter((ship) => ship.active).forEach((ship) => this.drawShip(ship));
+  drawShips(ships, nowMs) {
+    ships.filter((ship) => ship.active).forEach((ship) => this.drawShip(ship, nowMs));
   }
 
-  drawShip(ship) {
-    const element = this.config.ELEMENTS[ship.weakness];
+  drawShip(ship, nowMs) {
     const left = ship.x - this.config.PLAYFIELD.SHIP_WIDTH / 2;
     const top = ship.y - this.config.PLAYFIELD.SHIP_HEIGHT / 2;
+    const variantIndex = ship.variantIndex ?? 0;
+    const image = this.shipImages[variantIndex % this.shipImages.length];
 
     this.ctx.save();
+    if (image?.complete && image.naturalWidth > 0) {
+      this.ctx.drawImage(image, left, top, this.config.PLAYFIELD.SHIP_WIDTH, this.config.PLAYFIELD.SHIP_HEIGHT);
+    } else {
+      this.drawFallbackShip(left, top, ship.y);
+    }
+    this.drawShipFlagGlyph(ship, nowMs);
+    this.ctx.restore();
+  }
+
+  drawFallbackShip(left, top, centerY) {
     this.ctx.fillStyle = this.config.RENDER.COLORS.SHIP_FILL;
     this.ctx.strokeStyle = this.config.RENDER.COLORS.SHIP_STROKE;
     this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH;
@@ -161,24 +186,160 @@ export class CanvasRenderer {
     this.ctx.fill();
     this.ctx.stroke();
     this.ctx.beginPath();
-    this.ctx.moveTo(left + this.config.PLAYFIELD.SHIP_WIDTH, top);
-    this.ctx.lineTo(left + this.config.PLAYFIELD.SHIP_WIDTH + this.config.PLAYFIELD.SHIP_NOSE_WIDTH, ship.y);
-    this.ctx.lineTo(left + this.config.PLAYFIELD.SHIP_WIDTH, top + this.config.PLAYFIELD.SHIP_HEIGHT);
+    this.ctx.moveTo(left, top);
+    this.ctx.lineTo(left - this.config.PLAYFIELD.SHIP_NOSE_WIDTH, centerY);
+    this.ctx.lineTo(left, top + this.config.PLAYFIELD.SHIP_HEIGHT);
     this.ctx.closePath();
     this.ctx.fill();
     this.ctx.stroke();
-    this.ctx.fillStyle = this.config.RENDER.COLORS.SHIP_WINDOW;
-    this.ctx.fillRect(left + this.config.UI.HUD_GAP_PX, top + this.config.UI.BUTTON_RADIUS_PX, this.config.PLAYFIELD.SHIP_WIDTH / 2, this.config.UI.HUD_HEIGHT_PX / 3);
+  }
 
-    this.ctx.fillStyle = element.color;
+  drawShipFlagGlyph(ship, nowMs) {
+    const element = this.config.ELEMENTS[ship.weakness];
+    const template = this.config.GESTURES.TEMPLATES[ship.weakness];
+    const variantIndex = ship.variantIndex ?? 0;
+    const flagLeft = ship.x + this.config.RENDER.SHIP_FLAG_OFFSET_X - this.config.RENDER.SHIP_FLAG_WIDTH / 2;
+    const flagTop = ship.y + this.config.RENDER.SHIP_FLAG_OFFSET_Y - this.config.RENDER.SHIP_FLAG_HEIGHT / 2;
+    const contentRect = {
+      x: flagLeft + this.config.RENDER.SHIP_FLAG_PADDING,
+      y: flagTop + this.config.RENDER.SHIP_FLAG_PADDING,
+      width: this.config.RENDER.SHIP_FLAG_WIDTH - this.config.RENDER.SHIP_FLAG_PADDING * 2,
+      height: this.config.RENDER.SHIP_FLAG_HEIGHT - this.config.RENDER.SHIP_FLAG_PADDING * 2
+    };
+    const animationDuration = this.config.RENDER.SHIP_GLYPH_ANIMATION_MS + this.config.RENDER.SHIP_GLYPH_REST_MS;
+    const animationTime = (nowMs + variantIndex * this.config.WAVES.WAVE_SELECTION_HIGHLIGHT_INTERVAL_MS) % animationDuration;
+    const progress = Math.min(1, animationTime / this.config.RENDER.SHIP_GLYPH_ANIMATION_MS);
+
+    this.ctx.save();
+    this.ctx.fillStyle = this.config.RENDER.COLORS.SHIP_FLAG;
+    this.ctx.strokeStyle = element.color;
+    this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH + this.config.RENDER.CANVAS_BORDER_WIDTH;
     this.ctx.beginPath();
-    this.ctx.arc(ship.x, ship.y - this.config.PLAYFIELD.SHIP_BADGE_OFFSET_Y, this.config.PLAYFIELD.SHIP_BADGE_RADIUS, 0, Math.PI * 2);
+    this.ctx.roundRect(flagLeft, flagTop, this.config.RENDER.SHIP_FLAG_WIDTH, this.config.RENDER.SHIP_FLAG_HEIGHT, this.config.UI.BUTTON_RADIUS_PX);
     this.ctx.fill();
-    this.ctx.fillStyle = this.config.RENDER.COLORS.PAGE_BACKGROUND;
-    this.ctx.font = `700 ${this.config.PLAYFIELD.SHIP_BADGE_RADIUS}px ${this.config.UI.FONT_FAMILY}`;
+    this.ctx.stroke();
+
+    if (template?.length >= this.config.GESTURES.MIN_STROKE_POINTS) {
+      this.drawTemplateOnFlag(template, contentRect, progress, this.config.RENDER.COLORS.PAGE_BACKGROUND);
+    }
+
+    this.ctx.restore();
+  }
+
+  drawTemplateOnFlag(template, rect, progress, color) {
+    const bounds = getTemplateBounds(template);
+    const scaledPoints = template.map((point) => scaleTemplatePoint(point, bounds, rect));
+    const animatedPath = createAnimatedTemplatePath(scaledPoints.map((point) => [point.x, point.y]), progress);
+
+    this.ctx.save();
+    this.ctx.lineCap = "round";
+    this.ctx.lineJoin = "round";
+    this.ctx.strokeStyle = this.config.RENDER.COLORS.SHIP_FLAG_GUIDE;
+    this.ctx.lineWidth = this.config.RENDER.CANVAS_BORDER_WIDTH;
+    this.drawPolyline(scaledPoints);
+
+    this.ctx.strokeStyle = color;
+    this.ctx.lineWidth = this.config.RENDER.SHIP_GLYPH_STROKE_WIDTH;
+    animatedPath.completedSegments.forEach((segment) => {
+      this.drawLine(toPoint(segment.from), toPoint(segment.to));
+    });
+
+    if (animatedPath.partialSegment) {
+      this.drawLine(toPoint(animatedPath.partialSegment.from), toPoint(animatedPath.partialSegment.to));
+    }
+
+    scaledPoints.slice(0, animatedPath.revealedPointCount).forEach((point) => {
+      this.ctx.fillStyle = color;
+      this.ctx.beginPath();
+      this.ctx.arc(point.x, point.y, this.config.RENDER.SHIP_GLYPH_DOT_RADIUS, 0, Math.PI * 2);
+      this.ctx.fill();
+    });
+
+    this.ctx.restore();
+  }
+
+  drawWaveSelectionDialog(state, nowMs) {
+    if (state.phase !== "transition" || nowMs >= state.transitionUntilMs) {
+      return;
+    }
+
+    const render = this.config.RENDER;
+    const colors = render.COLORS;
+    const left = (this.config.PLAYFIELD.VIRTUAL_WIDTH - render.SELECTION_DIALOG_WIDTH) / 2;
+    const top = render.SELECTION_DIALOG_TOP;
+    const remainingMs = state.transitionUntilMs - nowMs;
+    const isLocked = remainingMs <= this.config.WAVES.WAVE_SELECTION_LOCK_IN_MS;
+
+    this.ctx.save();
+    this.ctx.fillStyle = colors.SELECTION_BACKDROP;
+    this.ctx.fillRect(0, 0, this.config.PLAYFIELD.VIRTUAL_WIDTH, this.config.PLAYFIELD.VIRTUAL_HEIGHT);
+    this.ctx.fillStyle = colors.SELECTION_PANEL;
+    this.ctx.strokeStyle = this.config.GESTURES.TRAIL_COLOR;
+    this.ctx.lineWidth = render.CANVAS_BORDER_WIDTH;
+    this.ctx.beginPath();
+    this.ctx.roundRect(left, top, render.SELECTION_DIALOG_WIDTH, render.SELECTION_DIALOG_HEIGHT, this.config.UI.PANEL_RADIUS_PX);
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    this.ctx.fillStyle = colors.TEXT;
+    this.ctx.font = `700 ${this.config.UI.HUD_HEIGHT_PX / 2}px ${this.config.UI.FONT_FAMILY}`;
     this.ctx.textAlign = "center";
     this.ctx.textBaseline = "middle";
-    this.ctx.fillText(element.label, ship.x, ship.y - this.config.PLAYFIELD.SHIP_BADGE_OFFSET_Y);
+    this.ctx.fillText(`Wave ${String(state.wave).padStart(2, "0")} Dragon Draw`, this.config.PLAYFIELD.VIRTUAL_WIDTH / 2, render.SELECTION_TITLE_Y);
+    this.ctx.font = `${this.config.PLAYFIELD.DRAGON_RADIUS - this.config.RENDER.CANVAS_BORDER_WIDTH}px ${this.config.UI.FONT_FAMILY}`;
+    this.ctx.fillStyle = colors.MUTED_TEXT;
+    this.ctx.fillText(isLocked ? "Selected dragons are ready." : "The roster is spinning...", this.config.PLAYFIELD.VIRTUAL_WIDTH / 2, render.SELECTION_SUBTITLE_Y);
+
+    Object.entries(this.config.ELEMENTS).forEach(([name, element], index) => {
+      const column = index % render.SELECTION_GRID_COLUMNS;
+      const row = Math.floor(index / render.SELECTION_GRID_COLUMNS);
+      const tileLeft = left + this.config.UI.HUD_GAP_PX * 2 + column * (render.SELECTION_TILE_WIDTH + render.SELECTION_TILE_GAP);
+      const tileTop = render.SELECTION_GRID_TOP + row * (render.SELECTION_TILE_HEIGHT + render.SELECTION_TILE_GAP);
+      const selected = state.activeElements.includes(name);
+      const scanned = this.isSelectionScanHighlighted(index, nowMs);
+      const highlighted = isLocked ? selected : scanned;
+
+      this.drawSelectionDragonTile(name, element, tileLeft, tileTop, highlighted, selected && isLocked);
+    });
+
+    this.ctx.restore();
+  }
+
+  isSelectionScanHighlighted(index, nowMs) {
+    const scanStep = Math.floor(nowMs / this.config.WAVES.WAVE_SELECTION_HIGHLIGHT_INTERVAL_MS);
+    const scanIndex = (scanStep * this.config.WAVES.WAVE_ELEMENT_COUNT + scanStep) % Object.keys(this.config.ELEMENTS).length;
+
+    return index === scanIndex || index === (scanIndex + this.config.WAVES.WAVE_ELEMENT_COUNT) % Object.keys(this.config.ELEMENTS).length;
+  }
+
+  drawSelectionDragonTile(name, element, left, top, highlighted, locked) {
+    const colors = this.config.RENDER.COLORS;
+    const centerX = left + this.config.RENDER.SELECTION_TILE_WIDTH / 2;
+    const iconY = top + this.config.PLAYFIELD.DRAGON_RADIUS + this.config.UI.BUTTON_RADIUS_PX;
+
+    this.ctx.save();
+    this.ctx.fillStyle = locked ? colors.SELECTION_ACTIVE : highlighted ? colors.SELECTION_SCAN : this.config.RENDER.COLORS.PANEL_BACKGROUND;
+    this.ctx.strokeStyle = highlighted || locked ? element.color : this.config.GESTURES.TRAIL_COLOR;
+    this.ctx.lineWidth = locked || highlighted ? this.config.RENDER.CANVAS_BORDER_WIDTH + this.config.RENDER.CANVAS_BORDER_WIDTH : this.config.RENDER.CANVAS_BORDER_WIDTH;
+    this.ctx.beginPath();
+    this.ctx.roundRect(left, top, this.config.RENDER.SELECTION_TILE_WIDTH, this.config.RENDER.SELECTION_TILE_HEIGHT, this.config.RENDER.SELECTION_TILE_RADIUS);
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    this.ctx.fillStyle = this.config.RENDER.COLORS.DRAGON_FILL;
+    this.ctx.strokeStyle = element.color;
+    this.ctx.beginPath();
+    this.ctx.arc(centerX, iconY, this.config.PLAYFIELD.DRAGON_RADIUS, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.stroke();
+    this.ctx.fillStyle = colors.TEXT;
+    this.ctx.font = `700 ${this.config.PLAYFIELD.DRAGON_RADIUS}px ${this.config.UI.FONT_FAMILY}`;
+    this.ctx.textAlign = "center";
+    this.ctx.textBaseline = "middle";
+    this.ctx.fillText(element.label, centerX, iconY);
+    this.ctx.font = `${this.config.UI.PANEL_RADIUS_PX + this.config.RENDER.CANVAS_BORDER_WIDTH}px ${this.config.UI.FONT_FAMILY}`;
+    this.ctx.fillStyle = colors.MUTED_TEXT;
+    this.ctx.fillText(name, centerX, top + this.config.RENDER.SELECTION_TILE_HEIGHT - this.config.UI.BUTTON_RADIUS_PX * 2);
     this.ctx.restore();
   }
 
@@ -224,4 +385,21 @@ export class CanvasRenderer {
     this.ctx.lineTo(to.x, to.y);
     this.ctx.stroke();
   }
+
+  drawPolyline(points) {
+    if (points.length < this.config.GESTURES.MIN_STROKE_POINTS) {
+      return;
+    }
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(points[0].x, points[0].y);
+    points.slice(1).forEach((point) => {
+      this.ctx.lineTo(point.x, point.y);
+    });
+    this.ctx.stroke();
+  }
+}
+
+function toPoint(point) {
+  return { x: point[0], y: point[1] };
 }

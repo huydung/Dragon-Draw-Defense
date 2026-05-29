@@ -29,6 +29,8 @@ describe("Milestone 3 wave survival loop", () => {
     state = advanceGameState(state, GAME_CONFIG.WAVES.WAVE_TRANSITION_DELAY_MS, rng);
     expect(state.phase).toBe("active");
     expect(state.ships).toHaveLength(1);
+    expect(state.activeElements).toHaveLength(GAME_CONFIG.WAVES.WAVE_ELEMENT_COUNT);
+    expect(state.ships[0].variantIndex).toBe(0);
 
     const startX = state.ships[0].x;
     state = advanceGameState(state, GAME_CONFIG.WAVES.WAVE_TRANSITION_DELAY_MS + 1000, rng);

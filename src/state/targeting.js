@@ -28,7 +28,11 @@ export function applyGlyphStrike(state, gesture, nowMs, config = GAME_CONFIG) {
 
   const precision = isPrecisionGesture(gesture.score, config);
   const scoreGain = calculateScore(state.wave, precision, config);
-  const dragonPosition = config.PLAYFIELD.DRAGON_POSITIONS[gesture.name];
+  const activeDragonIndex = state.activeElements?.indexOf(gesture.name) ?? -1;
+  const dragonPosition =
+    activeDragonIndex >= 0
+      ? config.PLAYFIELD.ACTIVE_DRAGON_POSITIONS[activeDragonIndex]
+      : config.PLAYFIELD.DRAGON_POSITIONS[gesture.name];
 
   console.log(
     `[STATE:KILL] ${gesture.name} strike cleared ${target.id}. Score +${scoreGain}. Precision bonus: ${precision}.`

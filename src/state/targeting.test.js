@@ -38,4 +38,21 @@ describe("Viking Raid Sentry targeting", () => {
     expect(nextState.lasers).toHaveLength(1);
     logSpy.mockRestore();
   });
+
+  test("glyph strike laser starts from the current active dragon slot", () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const state = {
+      ...createInitialState(),
+      activeElements: ["Water", "Fire", "Plant", "Metal", "Void"],
+      ships: [{ id: "ship-fire", x: 300, y: 100, weakness: "Fire", active: true }]
+    };
+    const nextState = applyGlyphStrike(
+      state,
+      { name: "Fire", score: GAME_CONFIG.GESTURES.GESTURE_PRECISION_THRESHOLD },
+      1000
+    );
+
+    expect(nextState.lasers[0].from).toEqual(GAME_CONFIG.PLAYFIELD.ACTIVE_DRAGON_POSITIONS[1]);
+    logSpy.mockRestore();
+  });
 });
