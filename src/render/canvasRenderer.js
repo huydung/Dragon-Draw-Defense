@@ -90,7 +90,7 @@ export class CanvasRenderer {
     const nextSnapshot = {
       health: `${this.config.RENDER.HUD_HEART.repeat(state.health)}`,
       wave: `WAVE ${String(state.wave).padStart(2, "0")}`,
-      score: `SCORE: ${String(state.score).padStart(6, "0")}`
+      score: `SCORE: ${state.score}`
     };
 
     if (this.hudSnapshot.health !== nextSnapshot.health) {
@@ -137,8 +137,8 @@ export class CanvasRenderer {
 
     this.hudElements.gameOverTitle.textContent = "Stand Tall, Sentry";
     this.hudElements.finalSummary.textContent = `You defeated ${defeatedShips} ships and survived ${survivedWaves} waves.`;
-    this.hudElements.finalScore.textContent = `Final Score: ${String(state.score).padStart(6, "0")}`;
-    this.hudElements.finalHighScore.textContent = `High Score: ${String(bestScore).padStart(6, "0")}`;
+    this.hudElements.finalScore.textContent = `Final Score: ${state.score}`;
+    this.hudElements.finalHighScore.textContent = `High Score: ${bestScore}`;
     this.renderHighScores(highScores);
   }
 
@@ -152,7 +152,7 @@ export class CanvasRenderer {
         const item = document.createElement("li");
         const score = document.createElement("strong");
         const meta = document.createElement("small");
-        score.textContent = String(entry.score).padStart(6, "0");
+        score.textContent = String(entry.score);
         meta.textContent = ` · ${entry.defeatedShips} ships · wave ${entry.reachedWave}`;
         item.append(score, meta);
         return item;
