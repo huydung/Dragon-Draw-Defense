@@ -11,6 +11,8 @@ import "./styles.css";
 const canvas = document.querySelector("#game-canvas");
 const restartButton = document.querySelector("#restart-game");
 const audioButton = document.querySelector("#audio-toggle");
+const mainMenu = document.querySelector("#main-menu");
+const startButton = document.querySelector("#start-game");
 
 const renderer = new CanvasRenderer(canvas, {
   health: document.querySelector("#health"),
@@ -60,9 +62,13 @@ document.documentElement.style.setProperty("--sandbox-offset", `${GAME_CONFIG.UI
 document.documentElement.style.setProperty("--canvas-cursor", `url("${GAME_CONFIG.RENDER.CURSOR_IMAGE_PATH}") 16 16, crosshair`);
 document.documentElement.style.setProperty("--button-art", `url("${GAME_CONFIG.RENDER.BUTTON_IMAGE_PATH}")`);
 
-document.addEventListener("pointerdown", () => audio.unlock(), { passive: true });
-document.addEventListener("keydown", () => audio.unlock(), { passive: true });
 audioButton?.addEventListener("click", () => audio.toggle());
+
+startButton.addEventListener("click", () => {
+  audio.unlock();
+  mainMenu.hidden = true;
+  requestAnimationFrame(tick);
+});
 
 const input = new GestureInput(canvas, {
   onCommit(points) {
@@ -109,7 +115,6 @@ restartButton.addEventListener("click", () => {
     highScores
   };
 });
-requestAnimationFrame(tick);
 
 function tick(nowMs) {
   gameState = advanceGameState(gameState, nowMs);

@@ -149,6 +149,96 @@ textarea {
   display: none;
 }
 
+#main-menu {
+  position: absolute;
+  z-index: 9;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 11, 22, 0.88);
+}
+
+#main-menu[hidden] {
+  display: none;
+}
+
+#main-menu-panel {
+  width: min(520px, calc(100% - var(--hud-gap) * 4));
+  display: grid;
+  gap: calc(var(--hud-gap) * 1.5);
+  padding: calc(var(--hud-gap) * 2.5);
+  border: var(--panel-border-width) solid color-mix(in srgb, var(--accent-color), transparent 30%);
+  border-radius: var(--panel-radius);
+  background: color-mix(in srgb, var(--page-background), black 18%);
+  color: var(--text-color);
+  text-align: center;
+}
+
+#main-menu-panel h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 5vh, 2.8rem);
+  color: var(--accent-color);
+  letter-spacing: 0.02em;
+}
+
+#main-menu-subtitle {
+  margin: 0;
+  color: var(--muted-text-color);
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#how-to-play {
+  text-align: left;
+  display: grid;
+  gap: var(--hud-gap);
+  padding: var(--hud-gap);
+  border: var(--panel-border-width) solid color-mix(in srgb, var(--text-color), transparent 70%);
+  border-radius: var(--button-radius);
+}
+
+#how-to-play h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-text-color);
+}
+
+#how-to-play ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: calc(var(--hud-gap) * 0.9);
+}
+
+#how-to-play li {
+  display: flex;
+  gap: calc(var(--hud-gap) * 1.2);
+  align-items: flex-start;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.tip-icon {
+  flex-shrink: 0;
+  font-size: 1.1em;
+  width: 1.4em;
+  text-align: center;
+}
+
+#how-to-play strong {
+  color: var(--accent-color);
+}
+
+#start-game {
+  width: 100%;
+  font-size: 1.05rem;
+  letter-spacing: 0.05em;
+}
+
 #game-over {
   position: absolute;
   z-index: 8;
@@ -193,6 +283,7 @@ textarea {
   color: var(--muted-text-color);
 }
 
+#start-game,
 #restart-game,
 #sandbox-link,
 #audio-toggle {

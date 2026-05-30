@@ -19,6 +19,37 @@
         <div id="feedback" aria-live="polite"></div>
         <div id="wave-banner" aria-live="polite"></div>
 
+        <div id="main-menu">
+          <section id="main-menu-panel" role="dialog" aria-modal="true" aria-labelledby="main-menu-title">
+            <h1 id="main-menu-title">Dragon Draw Defense</h1>
+            <p id="main-menu-subtitle">Viking Raid Sentry</p>
+
+            <section id="how-to-play" aria-label="How to play">
+              <h2>How to Play</h2>
+              <ul>
+                <li>
+                  <span class="tip-icon">⚓</span>
+                  <span>Enemy ships arrive in waves — each wave is faster and brings more ships.</span>
+                </li>
+                <li>
+                  <span class="tip-icon">🏝</span>
+                  <span>Don't let <strong>3 ships</strong> reach your island or the defense falls.</span>
+                </li>
+                <li>
+                  <span class="tip-icon">🐉</span>
+                  <span>Draw the shape shown on a ship's flag to command a dragon to destroy it.</span>
+                </li>
+                <li>
+                  <span class="tip-icon">✍</span>
+                  <span>The <strong>order</strong> of your strokes matters — watch the animated dots on the flag to learn the correct drawing sequence.</span>
+                </li>
+              </ul>
+            </section>
+
+            <button id="start-game" type="button">Start Game</button>
+          </section>
+        </div>
+
         <div id="game-over" hidden>
           <section id="game-over-panel" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
             <h1 id="game-over-title"></h1>
