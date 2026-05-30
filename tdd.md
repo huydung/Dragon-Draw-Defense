@@ -18,6 +18,7 @@ The codebase is split into clear layers:
 - Input: `src/input/`
 - State engine: `src/state/`
 - Rendering: `src/render/`
+- Audio: `src/audio/`
 - Sandbox authoring: `src/sandbox/`
 - Vite middleware/tools: `tools/`
 
@@ -43,13 +44,14 @@ All world calculations use this coordinate system. Browser layout scales the can
 
 All tunable values live in `src/config.js`, grouped by purpose:
 
-- `PLAYFIELD`: world dimensions, defense line, dragon slots, ship spawn bounds, ship dimensions.
+- `PLAYFIELD`: world dimensions, defense line, dragon slots, ship spawn bounds, ship dimensions, static ship slots.
 - `HEALTH`: starting health.
-- `WAVES`: wave counts, speed progression, selected element count, transition timings, spawn intervals.
-- `SCORE`: scoring and precision bonus values.
+- `WAVES`: wave counts, speed progression, selected element count, transition timings, spawn intervals. Ship count and speed formulas use values from this block — see Section 7.
+- `SCORE`: scoring, precision bonus values, high score limit.
 - `GESTURES`: trail, recognizer thresholds, recognizer math constants, glyph templates.
 - `ELEMENTS`: labels and colors for Fire, Wind, Earth, Water, Plant, Metal, Energy, Void, Light, Shadow, Prism.
-- `RENDER`: colors, ship flag layout, ship asset paths, selection dialog layout, laser and feedback durations.
+- `RENDER`: colors, ship flag layout, ship asset paths, dragon images, dragon defeat rotations, docked ship rotation, effect images, habitat images, selection dialog layout, laser and feedback durations.
+- `AUDIO`: music path, SFX paths, per-channel volumes, strike/burst delay.
 - `UI`: responsive layout and sandbox/editor dimensions.
 - `LOGGING`: sampling intervals.
 
@@ -97,6 +99,7 @@ Core files:
 - `src/state/gameRules.js`: score, precision, speed, damage rules.
 - `src/state/targeting.js`: closest matching ship selection and strike application.
 - `src/state/waveElements.js`: seeded random helper and active element selection.
+- `src/state/highScores.js`: localStorage persistence for the top-5 leaderboard.
 
 Current wave behavior:
 
@@ -104,14 +107,24 @@ Current wave behavior:
 - Only the selected 5 elements can appear on ships in that wave.
 - Ships spawn off-screen right at random y positions.
 - Ships move left using delta-time integration.
-- Breached ships decrement health and increment resolved ship count.
+- Breached ships decrement health, increment resolved ship count, spawn island fires, and create a docked ship entry.
 - Cleared waves automatically queue the next wave.
 
-Ship speed math:
+Ship count formula (see `GAME_CONFIG.WAVES` for tunable values):
 
-- Wave 1: `BASE_SHIP_SPEED`.
-- Wave 2: `BASE_SHIP_SPEED * (1 + WAVE_2_SPEED_MULTIPLIER)`.
-- Wave 3+: Wave 2 speed multiplied by `(1 + WAVE_SCALING_MULTIPLIER) ** (wave - 2)`.
+`BASE_SHIP_COUNT + (wave - 1) * SHIP_COUNT_INCREMENT`
+
+Ship speed formula (see `GAME_CONFIG.WAVES` for tunable values):
+
+`BASE_SHIP_SPEED * (1 + SPEED_GROWTH_MULTIPLIER) ^ (wave - 1)`
+
+A single exponential multiplier applies uniformly from Wave 1 onward.
+
+Game state fields introduced by breach handling:
+
+- `islandHitCount`: total cumulative breaches.
+- `islandFires`: array of fire position/size/rotation records, grows with each breach.
+- `dockedShips`: array of breach-captured ships rendered on the island.
 
 8. Rendering
 
@@ -119,29 +132,63 @@ Core file: `src/render/canvasRenderer.js`.
 
 The renderer draws:
 
-- Background grid and defense line.
-- Five active dragons only.
-- Spawned ships.
-- Generated ship base variants from `public/ships/`.
-- Dynamic ship flag panels.
-- Animated glyph paths on ship flags.
-- Lasers, damage flash, drawing trail, feedback, selection dialog, and game over DOM state.
+- Background sea gradient.
+- Static island habitat (sand, grass, house, palm, tree, drawn to an offscreen cache).
+- Five active dragons as PNG sprites with idle bob/sway animation and attack lunge.
+- Island fire sprites that accumulate per breach.
+- Active ships with dynamic glyph flag panels (animated drawing order).
+- Docked ships: full ship image rotated 45° CW (`RENDER.DOCKED_SHIP_ROTATION`), no glyph overlay. The skull baked into the ship PNG is visible.
+- Lasers with glow, bolt sprite, muzzle flash, and impact burst.
+- Explosion animations (3-frame sprite sequence with sparks).
+- Drawing trail, recognition feedback, wave selection dialog, and game over DOM state.
+
+Dragon defeat rotation: when `islandHitCount >= HEALTH.INITIAL_HEALTH`, each dragon rotates to its configured dead angle. Values are set per element in `RENDER.DRAGON_DEFEAT_ROTATIONS` in `src/config.js` — edit those values to adjust the defeated pose for individual dragons.
 
 Ship glyph animation is supported by pure helpers in `src/render/glyphTemplateAnimation.js` so drawing-order logic can be unit tested separately from canvas rendering.
 
 9. Assets
 
-Generated ship bases are stored in:
+Ship bases (PNG, 512×341, RGBA, chroma-key processed):
 
 - `public/ships/ship-base-1.png`
 - `public/ships/ship-base-2.png`
 - `public/ships/ship-base-3.png`
 
-They were generated with the Image skill on chroma-key backgrounds, processed to transparent PNGs, and resized for runtime use.
+Each ship base has a skull drawn onto the flag area. This skull is visible when a ship is docked (no glyph panel overlay). For active ships the skull is hidden behind the dynamically rendered glyph panel.
 
-The ships are decorative bases. The playable glyph information is drawn dynamically by canvas on top of the flag panel so the same asset can represent any element.
+Dragon portraits:
 
-10. Logging Protocol
+- `src/assets/dragons/` — 11 PNG sprites, one per element (e.g. `Fire_Fire_Dragon.png`).
+
+Audio:
+
+- `public/audio/dragon-defense-loop.ogg` — looping background music.
+- `public/audio/dragon-strike.ogg`, `ship-burst.ogg`, `ui-click.ogg`, `run-end.ogg` — SFX.
+
+UI:
+
+- `public/ui/crosshair-blue.png` — custom canvas cursor.
+- `public/ui/button-long-blue.png` — button sprite.
+
+Effects:
+
+- `public/effects/muzzle.png`, `magic-ring.png`, `bolt.png` — laser/impact sprites.
+- `public/effects/explosion-1.png`, `explosion-2.png`, `explosion-3.png` — explosion frames.
+
+Habitat:
+
+- `public/habitat/house.png`, `palm.png`, `tree.png`, `cannonball.png`, `fire-1.png`, `fire-2.png`.
+
+10. Audio
+
+`src/audio/gameAudio.js` exports a `GameAudio` class:
+
+- Plays looping background music and per-event SFX.
+- Delays audio context unlock until the first user interaction (browser autoplay policy).
+- Mute toggle persists the preference to `localStorage` (key: `dragon-draw-defense-audio-enabled`).
+- All volume levels and paths come from `GAME_CONFIG.AUDIO` — edit that block to tune volumes without touching code.
+
+11. Logging Protocol
 
 Use explicit console prefixes:
 
@@ -152,7 +199,7 @@ Use explicit console prefixes:
 - `[STATE:KILL]`: successful ship clear and score gain.
 - `[SANDBOX:*]`: sandbox authoring and save behavior.
 
-11. Testing
+12. Testing
 
 Required command before committing:
 
@@ -170,12 +217,13 @@ Current test coverage includes:
 - Wave selection and seeded random behavior.
 - Wave transition/spawn/movement/breach/restart behavior.
 - Targeting closest matching ship.
+- High score insert, load, save, and validation logic.
 - Sandbox state editing, snapping, undo/redo.
 - Glyph flag animation helper math.
 
 Browser smoke checks should be run after visual or interaction changes. Use Playwright screenshots for canvas-heavy changes because DOM assertions cannot verify most gameplay rendering.
 
-12. Commit Discipline
+13. Commit Discipline
 
 Use conventional commits:
 
@@ -190,7 +238,7 @@ Per project instruction, after each turn:
 2. If it fails, fix it before committing.
 3. If it passes, commit all current changes with a clear conventional message.
 
-13. Known Technical Limits
+14. Known Technical Limits
 
 - Recognition is unistroke only.
 - Glyph matching can still confuse visually similar shapes if templates are too close.

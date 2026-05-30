@@ -1,8 +1,6 @@
 import { GAME_CONFIG } from "../config.js";
 import { createAnimatedTemplatePath, getTemplateBounds, scaleTemplatePoint } from "./glyphTemplateAnimation.js";
 
-const CRAWLING_DRAGONS = new Set(["Earth", "Metal", "Shadow", "Water"]);
-
 export class CanvasRenderer {
   constructor(canvas, hudElements, config = GAME_CONFIG) {
     this.canvas = canvas;
@@ -251,8 +249,8 @@ export class CanvasRenderer {
     context.fillStyle = "#f2d996";
     context.beginPath();
     context.moveTo(0, top + 16);
-    context.bezierCurveTo(38, top + 1, 88, top + 16, perimeterX + 26, top + 4);
-    context.lineTo(perimeterX + 30, height);
+    context.bezierCurveTo(38, top + 1, 62, top + 16, perimeterX, top + 4);
+    context.lineTo(perimeterX, height);
     context.lineTo(0, height);
     context.closePath();
     context.fill();
@@ -260,8 +258,8 @@ export class CanvasRenderer {
     context.fillStyle = "#40b969";
     context.beginPath();
     context.moveTo(0, top + 40);
-    context.bezierCurveTo(38, top + 26, 84, top + 40, perimeterX + 22, top + 30);
-    context.lineTo(perimeterX + 27, height);
+    context.bezierCurveTo(38, top + 26, 62, top + 40, perimeterX, top + 30);
+    context.lineTo(perimeterX, height);
     context.lineTo(0, height);
     context.closePath();
     context.fill();
@@ -321,7 +319,7 @@ export class CanvasRenderer {
       const drawX = position.x + idle.x + attackPulse * this.config.RENDER.DRAGON_ATTACK_LUNGE_PX;
       const drawY = position.y + idle.y - attackPulse * this.config.RENDER.DRAGON_ATTACK_LIFT_PX;
       const scale = 1 + attackPulse * this.config.RENDER.DRAGON_ATTACK_SCALE;
-      const defeatRotation = CRAWLING_DRAGONS.has(name) ? -Math.PI : -Math.PI / 2;
+      const defeatRotation = this.config.RENDER.DRAGON_DEFEAT_ROTATIONS[name] ?? -Math.PI / 2;
       const rotation = dragonsDefeated ? defeatRotation : idle.rotation + attackPulse * 0.12;
 
       this.ctx.save();
@@ -376,22 +374,36 @@ export class CanvasRenderer {
   }
 
   drawShips(ships, nowMs) {
-    ships.filter((ship) => ship.active || ship.docked).forEach((ship) => this.drawShip(ship, nowMs));
+    ships.filter((ship) => ship.active || ship.docked || ship.frozen).forEach((ship) => this.drawShip(ship, nowMs));
   }
 
   drawShip(ship, nowMs) {
-    const left = ship.x - this.config.PLAYFIELD.SHIP_WIDTH / 2;
-    const top = ship.y - this.config.PLAYFIELD.SHIP_HEIGHT / 2;
+    const w = this.config.PLAYFIELD.SHIP_WIDTH;
+    const h = this.config.PLAYFIELD.SHIP_HEIGHT;
     const variantIndex = ship.variantIndex ?? 0;
     const image = this.shipImages[variantIndex % this.shipImages.length];
 
     this.ctx.save();
-    if (image?.complete && image.naturalWidth > 0) {
-      this.ctx.drawImage(image, left, top, this.config.PLAYFIELD.SHIP_WIDTH, this.config.PLAYFIELD.SHIP_HEIGHT);
+    if (ship.docked) {
+      this.ctx.translate(ship.x, ship.y);
+      this.ctx.rotate(this.config.RENDER.DOCKED_SHIP_ROTATION);
+      if (image?.complete && image.naturalWidth > 0) {
+        this.ctx.drawImage(image, -w / 2, -h / 2, w, h);
+      } else {
+        this.drawFallbackShip(-w / 2, -h / 2, 0);
+      }
     } else {
-      this.drawFallbackShip(left, top, ship.y);
+      const left = ship.x - w / 2;
+      const top = ship.y - h / 2;
+      if (image?.complete && image.naturalWidth > 0) {
+        this.ctx.drawImage(image, left, top, w, h);
+      } else {
+        this.drawFallbackShip(left, top, ship.y);
+      }
+      if (!ship.frozen) {
+        this.drawShipFlagGlyph(ship, nowMs);
+      }
     }
-    this.drawShipFlagGlyph(ship, nowMs);
     this.ctx.restore();
   }
 

@@ -171,7 +171,7 @@ function applyBreaches(state, nowMs, config, rng) {
     const breachedShip = nextState.ships.find((ship) => ship.id === shipId);
     nextState = handleShipBreach(nextState, config);
     const islandHitCount = (nextState.islandHitCount ?? 0) + 1;
-    const dockedShip = createDockedShip(breachedShip, islandHitCount, config);
+    const dockedShip = createDockedShip(breachedShip);
     nextState = {
       ...nextState,
       islandHitCount,
@@ -182,6 +182,10 @@ function applyBreaches(state, nowMs, config, rng) {
       gameOverDialogAtMs: nextState.gameOver ? nowMs + config.RENDER.GAME_OVER_REVEAL_DELAY_MS : 0,
       ships: nextState.ships.map((ship) => (ship.id === shipId ? { ...ship, active: false, breached: true } : ship))
     };
+  }
+
+  if (nextState.gameOver) {
+    nextState = freezeRemainingShips(nextState);
   }
 
   return nextState;
@@ -206,29 +210,26 @@ function createIslandFires(islandHitCount, rng) {
   }));
 }
 
-function createDockedShip(ship, islandHitCount, config) {
+function freezeRemainingShips(state) {
+  const hasRemaining = state.ships.some((ship) => ship.active);
+  if (!hasRemaining) return state;
+  return {
+    ...state,
+    ships: state.ships.map((ship) => (ship.active ? { ...ship, active: false, frozen: true } : ship))
+  };
+}
+
+function createDockedShip(ship) {
   if (!ship) {
     return null;
   }
 
-  const position = getDockedShipPosition(islandHitCount, config);
   return {
     ...ship,
     id: `${ship.id}-docked`,
-    x: position.x,
-    y: position.y,
     speed: 0,
     active: false,
     breached: true,
     docked: true
-  };
-}
-
-function getDockedShipPosition(islandHitCount, config) {
-  const slotIndex = (islandHitCount - 1) % config.HEALTH.INITIAL_HEALTH;
-  const slotSpacing = config.PLAYFIELD.VIRTUAL_HEIGHT / (config.HEALTH.INITIAL_HEALTH + 1);
-  return {
-    x: config.PLAYFIELD.DAMAGE_PERIMETER_X + config.PLAYFIELD.SHIP_WIDTH * 0.42,
-    y: slotSpacing * (slotIndex + 1) + config.PLAYFIELD.SAFE_TOP_PADDING * 0.2
   };
 }

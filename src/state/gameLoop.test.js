@@ -88,7 +88,7 @@ describe("Milestone 3 wave survival loop", () => {
     logSpy.mockRestore();
   });
 
-  test("breaches stop resolving once the island is defeated", () => {
+  test("remaining active ships freeze in place when the island is defeated", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const state = {
       ...createInitialGameState(GAME_CONFIG, createSeededRandom(7), 0),
@@ -120,12 +120,17 @@ describe("Milestone 3 wave survival loop", () => {
 
     expect(nextState.health).toBe(0);
     expect(nextState.gameOver).toBe(true);
+    // first-breach causes the defeat and docks on the island
     expect(nextState.islandHitCount).toBe(1);
     expect(nextState.islandFires).toHaveLength(2);
     expect(nextState.dockedShips).toHaveLength(1);
     expect(nextState.dockedShips[0].id).toBe("first-breach-docked");
     expect(nextState.gameOverDialogAtMs).toBe(100 + GAME_CONFIG.RENDER.GAME_OVER_REVEAL_DELAY_MS);
     expect(nextState.resolvedShipCount).toBe(1);
+    // extra-breach is frozen in place, not docked
+    const extraShip = nextState.ships.find((s) => s.id === "extra-breach");
+    expect(extraShip.active).toBe(false);
+    expect(extraShip.frozen).toBe(true);
     logSpy.mockRestore();
   });
 

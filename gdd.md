@@ -65,42 +65,46 @@ The world simulation uses a fixed 800x450 virtual coordinate system. The browser
 
 The left side contains:
 
-- A dashed yellow defense/damage line.
-- Five active dragon slots for the current wave.
+- A sand island habitat with house, palm, and tree decorations.
+- A dashed yellow defense/damage line at the island perimeter.
+- Five active dragon slots for the current wave (each dragon shown as a PNG sprite).
 - Health, wave, and score HUD across the top.
+
+When ships breach the island:
+
+- Each breached ship docks visually on the island, rotated 45° clockwise and displaying the full ship image (no glyph panel). Ships have a skull on their flag panel indicating capture.
+- Island fires spawn and accumulate with each breach.
 
 The right side contains:
 
 - Viking airships spawning off-screen.
-- Ship flags displaying the required glyph.
-- Animated glyph drawing order on each flag.
+- Ship flags displaying the required glyph (animated in drawing order).
 
 8. Wave Rules
 
-Wave progression is endless:
+Wave progression is endless. Ship counts and speeds follow formulas defined in `GAME_CONFIG.WAVES` — refer to that config for exact tunable values.
 
-- Wave 1: 5 ships.
-- Wave 2: 8 ships.
-- Wave 3: 12 ships.
-- Wave 4+: Wave 3 count plus 1 additional ship per wave after Wave 3.
+Ship count per wave: `BASE_SHIP_COUNT + (wave - 1) * SHIP_COUNT_INCREMENT`
 
-Ship speed:
+Currently: Wave 1 = 5 ships, Wave 2 = 9, Wave 3 = 13, and so on (adding 4 per wave).
 
-- Wave 1 uses the base speed.
-- Wave 2 increases by 15%.
-- Wave 3+ scales exponentially using the configured 20% multiplier.
+Ship speed: `BASE_SHIP_SPEED * (1 + SPEED_GROWTH_MULTIPLIER) ^ (wave - 1)`
+
+Currently: a uniform 15% exponential speed increase each wave from the base speed.
 
 Before each wave, a 3-second dragon draft dialog shows all 11 elements, rapidly highlights possible selections, then locks onto the 5 active dragons used in that wave.
 
 9. Scoring, Win, and Lose States
 
-Base kill score: `BASE_SCORE_PER_KILL * current wave`.
+Base kill score: `BASE_SCORE_PER_KILL * current wave` (see `GAME_CONFIG.SCORE`).
 
-Precision bonus: +50 if recognition confidence is at least `GESTURE_PRECISION_THRESHOLD`.
+Precision bonus: added if recognition confidence meets `GESTURE_PRECISION_THRESHOLD` (see `GAME_CONFIG.GESTURES`).
 
-Win state: The prototype is currently endless high-score survival. There is no campaign victory condition yet.
+Win state: The prototype is currently endless high-score survival. There is no campaign victory condition.
 
-Lose state: The defense line has 3 health. Each breached ship removes 1 health. At 0 health, the game freezes and shows a Defeat overlay with final score and a restart button.
+Lose state: The defense line has 3 health (configurable via `GAME_CONFIG.HEALTH.INITIAL_HEALTH`). Each breached ship removes 1 health. At 0 health, the game freezes and shows a Defeat overlay with final score, a high score comparison, a leaderboard of recent local runs, and a restart button.
+
+High scores: Top 5 runs are saved to `localStorage` and shown on the defeat screen. Each entry records score, defeated ship count, and wave reached.
 
 10. Controls
 
@@ -114,6 +118,8 @@ Mobile or touch:
 - Touch and drag on the game canvas.
 - Lift finger to submit the gesture.
 
+Audio: an on/off toggle button persists the preference to `localStorage`.
+
 11. UI and UX Flow
 
 Current implemented flow:
@@ -122,8 +128,9 @@ Current implemented flow:
 2. Wave 1 begins with a 3-second dragon draft dialog.
 3. Active combat starts automatically.
 4. Waves continue until health reaches 0.
-5. Defeat overlay appears.
-6. Restart button resets health, score, ships, and Wave 1 state.
+5. Defeat overlay appears (after a brief reveal delay).
+6. Defeat overlay shows final score, high score, local leaderboard, and a Play Again button.
+7. Restart button resets health, score, ships, and Wave 1 state.
 
 The earlier title screen idea is not implemented and is no longer part of the current vertical slice.
 
@@ -151,16 +158,21 @@ Implemented:
 - 11-element glyph library.
 - Random 5-dragon wave draft.
 - Endless wave spawning, movement, breach damage, scoring, restart, and game over.
-- Generated Viking airship base variants.
-- Animated glyph flags on ships.
+- Generated Viking airship base variants with skull on flag panel.
+- Animated glyph flags on active ships; docked ships show skull and rotate 45° CW.
+- Dragon PNG sprites (one per element) with idle bob/sway and attack lunge animation.
+- Island habitat: sand, grass, house, palm, tree, cannonball decorations.
+- Island breach effects: docked ships, accumulating fires.
+- Visual effects: lasers, explosions (3-frame sprites), muzzle flash, magic ring, bolt.
+- Audio: looping music, SFX (strike, burst, click, run-end), mute toggle with localStorage.
+- Persistent local high score leaderboard (top 5 runs, saved to localStorage).
 - Separate glyph sandbox and config writer.
 - Vitest coverage for logic-heavy systems.
 
 Still out of scope:
 
 - Production DML art.
-- Animated dragon models.
-- Audio/music.
+- Audio/music (placeholder assets only).
 - Leaderboards or server persistence.
 - Multi-stroke gesture recognition.
 - Bosses, powerups, campaign progression, or economy systems.

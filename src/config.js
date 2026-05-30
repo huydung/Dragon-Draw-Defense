@@ -39,8 +39,7 @@ export const GAME_CONFIG = {
     VIRTUAL_WIDTH: 800,
     VIRTUAL_HEIGHT: 450,
     SAFE_TOP_PADDING: 58,
-    DEFENSE_LINE_X: 92,
-    DAMAGE_PERIMETER_X: 110,
+    DAMAGE_PERIMETER_X: 150,
     DRAGON_X: 48,
     DRAGON_RADIUS: 15,
     DRAGON_POSITIONS: {
@@ -58,9 +57,9 @@ export const GAME_CONFIG = {
     },
     ACTIVE_DRAGON_POSITIONS: [
       { x: 48, y: 126 },
-      { x: 48, y: 190 },
-      { x: 48, y: 254 },
-      { x: 48, y: 318 },
+      { x: 88, y: 190 },
+      { x: 68, y: 254 },
+      { x: 88, y: 318 },
       { x: 48, y: 382 }
     ],
     SHIP_WIDTH: 96,
@@ -84,12 +83,12 @@ export const GAME_CONFIG = {
 
   WAVES: {
     BASE_SHIP_COUNT: 5,
-    SHIP_COUNT_INCREMENT: 4,
+    SHIP_COUNT_INCREMENT: 5,
     WAVE_ELEMENT_COUNT: 5,
     BASE_SHIP_SPEED: 40,
-    SPEED_GROWTH_MULTIPLIER: 0.15,
+    SPEED_GROWTH_MULTIPLIER: 0.25,
     WAVE_TRANSITION_DELAY_MS: 3000,
-    WAVE_CLEAR_VFX_DELAY_MS: 900,
+    WAVE_CLEAR_VFX_DELAY_MS: 3000,
     WAVE_SELECTION_HIGHLIGHT_INTERVAL_MS: 120,
     WAVE_SELECTION_LOCK_IN_MS: 650,
     BASE_MIN_SPAWN_INTERVAL_MS: 1500,
@@ -148,21 +147,45 @@ export const GAME_CONFIG = {
         [90, 60]
       ],
       Plant: [
-        [49.15, 89.59],
-        [50, 15],
-        [17.26, 33.65],
-        [84.3, 32.99],
-        [50, 15]
-      ],
+  [
+    50,
+    90
+  ],
+  [
+    50,
+    15
+  ],
+  [
+    0,
+    75
+  ],
+  [
+    100,
+    75
+  ],
+  [
+    50,
+    15
+  ]
+],
       Metal: [
-        [20, 25],
-        [80, 25],
-        [65, 50],
-        [80, 75],
-        [20, 75],
-        [35, 50],
-        [20, 25]
-      ],
+  [
+    0,
+    74
+  ],
+  [
+    100,
+    11
+  ],
+  [
+    98,
+    75
+  ],
+  [
+    47,
+    49
+  ]
+],
       Energy: [
         [35, 5],
         [35, 48],
@@ -277,7 +300,7 @@ export const GAME_CONFIG = {
     BACKGROUND_GRID_STEP: 40,
     CURSOR_IMAGE_PATH: PUBLIC_ASSET_PATHS.cursor,
     BUTTON_IMAGE_PATH: PUBLIC_ASSET_PATHS.button,
-    SHIP_BADGE_OFFSET_Y: 28,
+    SHIP_BADGE_OFFSET_Y: 8,
     SHIP_NOSE_WIDTH: 16,
     SHIP_VARIANT_PATHS: [
       `${PUBLIC_ASSET_BASE}ships/ship-base-1.png`,
@@ -289,10 +312,10 @@ export const GAME_CONFIG = {
     SHIP_FLAG_WIDTH: 42,
     SHIP_FLAG_HEIGHT: 26,
     SHIP_FLAG_PADDING: 5,
-    SHIP_GLYPH_STROKE_WIDTH: 3,
+    SHIP_GLYPH_STROKE_WIDTH: 2,
     SHIP_GLYPH_DOT_RADIUS: 2,
-    SHIP_GLYPH_ANIMATION_MS: 1600,
-    SHIP_GLYPH_REST_MS: 500,
+    SHIP_GLYPH_ANIMATION_MS: 1200,
+    SHIP_GLYPH_REST_MS: 800,
     DRAGON_IMAGE_PATHS,
     HABITAT_IMAGE_PATHS: {
       house: PUBLIC_ASSET_PATHS.habitatHouse,
@@ -320,6 +343,22 @@ export const GAME_CONFIG = {
     DRAGON_ATTACK_LIFT_PX: 6,
     DRAGON_ATTACK_SCALE: 0.2,
     DRAGON_ATTACK_AURA_RADIUS: 34,
+    // Rotation (radians) applied to each dragon when the island is defeated.
+    // Positive = CW, negative = CCW. -Math.PI = flat/fallen, -Math.PI/2 = tipped sideways.
+    DRAGON_DEFEAT_ROTATIONS: {
+      Fire: -Math.PI,
+      Wind: -Math.PI / 2,
+      Earth: -Math.PI,
+      Water: -Math.PI,
+      Plant: -Math.PI / 2,
+      Metal: -Math.PI,
+      Energy: -Math.PI,
+      Void: -Math.PI / 2,
+      Light: -Math.PI,
+      Shadow: -Math.PI / 2,
+      Prism: -Math.PI / 2
+    },
+    DOCKED_SHIP_ROTATION: Math.PI / 4,
     SELECTION_DIALOG_WIDTH: 500,
     SELECTION_DIALOG_HEIGHT: 320,
     SELECTION_DIALOG_TOP: 74,
