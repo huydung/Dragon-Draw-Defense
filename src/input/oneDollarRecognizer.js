@@ -5,18 +5,25 @@ import { GAME_CONFIG } from "../config.js";
 export class OneDollarRecognizer {
   constructor(config = GAME_CONFIG) {
     this.config = config;
-    this.templates = Object.entries(config.GESTURES.TEMPLATES).map(([name, points]) => ({
-      name,
-      points: normalizePath(toPointObjects(points), config)
-    }));
+    this.templates = Object.entries(config.GESTURES.TEMPLATES)
+      .map(([name, points]) => ({
+        name,
+        points: normalizePath(toPointObjects(points), config)
+      }))
+      .filter((template) => template.points.length === config.GESTURES.GESTURE_RESAMPLE_POINTS);
   }
 
   recognize(rawPoints, candidateNames = null) {
-    if (rawPoints.length < this.config.GESTURES.MIN_STROKE_POINTS) {
+    const rawPointObjects = toPointObjects(rawPoints);
+    if (rawPointObjects.length < this.config.GESTURES.MIN_STROKE_POINTS) {
       return { name: null, score: 0, accepted: false, ambiguous: false, candidates: [] };
     }
 
-    const candidate = normalizePath(rawPoints, this.config);
+    const candidate = normalizePath(rawPointObjects, this.config);
+    if (candidate.length !== this.config.GESTURES.GESTURE_RESAMPLE_POINTS) {
+      return { name: null, score: 0, accepted: false, ambiguous: false, candidates: [] };
+    }
+
     const allowedNames = candidateNames ? new Set(candidateNames) : null;
     const scoredCandidates = [];
 
@@ -64,7 +71,24 @@ export class OneDollarRecognizer {
 }
 
 function toPointObjects(points) {
-  return points.map(([x, y]) => ({ x, y }));
+  const pointList = unwrapPointList(points);
+  return pointList
+    .map((point) => {
+      if (Array.isArray(point)) {
+        return { x: Number(point[0]), y: Number(point[1]) };
+      }
+
+      return { x: Number(point.x), y: Number(point.y) };
+    })
+    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+}
+
+function unwrapPointList(points) {
+  if (Array.isArray(points) && points.length === 1 && Array.isArray(points[0]) && Array.isArray(points[0][0])) {
+    return points[0];
+  }
+
+  return Array.isArray(points) ? points : [];
 }
 
 function normalizePath(points, config) {
@@ -76,13 +100,29 @@ function normalizePath(points, config) {
 }
 
 function resample(points, targetCount) {
-  const interval = pathLength(points) / (targetCount - 1);
+  if (points.length === 0 || targetCount <= 0) {
+    return [];
+  }
+
+  if (targetCount === 1) {
+    return [points[0]];
+  }
+
+  const length = pathLength(points);
+  if (length <= Number.EPSILON) {
+    return Array.from({ length: targetCount }, () => ({ ...points[0] }));
+  }
+
+  const interval = length / (targetCount - 1);
   const resampled = [points[0]];
   let accumulatedDistance = 0;
   const workingPoints = points.map((point) => ({ ...point }));
 
   for (let index = 1; index < workingPoints.length; index += 1) {
     const currentDistance = distance(workingPoints[index - 1], workingPoints[index]);
+    if (currentDistance <= Number.EPSILON) {
+      continue;
+    }
 
     if (accumulatedDistance + currentDistance >= interval) {
       const ratio = (interval - accumulatedDistance) / currentDistance;
@@ -98,11 +138,11 @@ function resample(points, targetCount) {
     }
   }
 
-  if (resampled.length === targetCount - 1) {
+  while (resampled.length < targetCount) {
     resampled.push(workingPoints[workingPoints.length - 1]);
   }
 
-  return resampled;
+  return resampled.slice(0, targetCount);
 }
 
 function indicativeAngle(points) {
@@ -173,8 +213,17 @@ function scoreDistance(distance, config) {
 }
 
 function pathDistance(points, template) {
-  const total = points.reduce((sum, point, index) => sum + distance(point, template[index]), 0);
-  return total / points.length;
+  const count = Math.min(points.length, template.length);
+  if (count === 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  let total = 0;
+  for (let index = 0; index < count; index += 1) {
+    total += distance(points[index], template[index]);
+  }
+
+  return total / count;
 }
 
 function pathLength(points) {

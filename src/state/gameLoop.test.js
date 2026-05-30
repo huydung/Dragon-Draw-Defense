@@ -77,6 +77,12 @@ describe("Milestone 3 wave survival loop", () => {
     expect(nextState.gameOver).toBe(true);
     expect(nextState.islandHitCount).toBe(1);
     expect(nextState.islandFires).toHaveLength(2);
+    expect(nextState.dockedShips).toHaveLength(1);
+    expect(nextState.dockedShips[0]).toMatchObject({
+      weakness: "Fire",
+      active: false,
+      docked: true
+    });
     expect(nextState.gameOverDialogAtMs).toBe(100 + GAME_CONFIG.RENDER.GAME_OVER_REVEAL_DELAY_MS);
     expect(nextState.resolvedShipCount).toBe(1);
     logSpy.mockRestore();
@@ -116,6 +122,8 @@ describe("Milestone 3 wave survival loop", () => {
     expect(nextState.gameOver).toBe(true);
     expect(nextState.islandHitCount).toBe(1);
     expect(nextState.islandFires).toHaveLength(2);
+    expect(nextState.dockedShips).toHaveLength(1);
+    expect(nextState.dockedShips[0].id).toBe("first-breach-docked");
     expect(nextState.gameOverDialogAtMs).toBe(100 + GAME_CONFIG.RENDER.GAME_OVER_REVEAL_DELAY_MS);
     expect(nextState.resolvedShipCount).toBe(1);
     logSpy.mockRestore();
@@ -128,6 +136,7 @@ describe("Milestone 3 wave survival loop", () => {
     expect(state.wave).toBe(1);
     expect(state.score).toBe(0);
     expect(state.defeatedShipCount).toBe(0);
+    expect(state.dockedShips).toHaveLength(0);
     expect(state.health).toBe(GAME_CONFIG.HEALTH.INITIAL_HEALTH);
     expect(state.gameOver).toBe(false);
     expect(state.phase).toBe("transition");

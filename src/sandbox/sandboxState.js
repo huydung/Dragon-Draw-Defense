@@ -139,15 +139,17 @@ export function parsePointsJson(value) {
 }
 
 export function normalizePoints(points) {
-  if (!Array.isArray(points) || points.length < GAME_CONFIG.GESTURES.MIN_STROKE_POINTS) {
+  const pointList = Array.isArray(points) && points.length === 1 && Array.isArray(points[0]?.[0]) ? points[0] : points;
+
+  if (!Array.isArray(pointList) || pointList.length < GAME_CONFIG.GESTURES.MIN_STROKE_POINTS) {
     throw new Error("A shape needs at least two points.");
   }
 
-  if (points.length > GAME_CONFIG.UI.TEMPLATE_MAX_POINTS) {
+  if (pointList.length > GAME_CONFIG.UI.TEMPLATE_MAX_POINTS) {
     throw new Error(`A shape can use at most ${GAME_CONFIG.UI.TEMPLATE_MAX_POINTS} anchor points.`);
   }
 
-  return points.map(normalizePoint);
+  return pointList.map(normalizePoint);
 }
 
 export function createDefaultShapeName(templates) {

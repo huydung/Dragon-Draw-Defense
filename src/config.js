@@ -164,10 +164,10 @@ export const GAME_CONFIG = {
         [20, 25]
       ],
       Energy: [
-        [62, 10],
+        [35, 5],
         [35, 48],
-        [58, 48],
-        [38, 90]
+        [90, 48],
+        [90, 90]
       ],
       Void: [
         [72, 25],
@@ -197,7 +197,7 @@ export const GAME_CONFIG = {
         [50, 90],
         [10, 50]
       ]
-    } 
+    }
     // SANDBOX_TEMPLATES_END
   },
 

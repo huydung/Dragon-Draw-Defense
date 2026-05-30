@@ -10,6 +10,7 @@ export function createInitialGameState(config = GAME_CONFIG, rng = Math.random, 
       defeatedShipCount: 0,
       islandHitCount: 0,
       islandFires: [],
+      dockedShips: [],
       lasers: [],
       explosions: [],
       feedback: null,
@@ -167,12 +168,15 @@ function applyBreaches(state, nowMs, config, rng) {
       break;
     }
 
+    const breachedShip = nextState.ships.find((ship) => ship.id === shipId);
     nextState = handleShipBreach(nextState, config);
     const islandHitCount = (nextState.islandHitCount ?? 0) + 1;
+    const dockedShip = createDockedShip(breachedShip, islandHitCount, config);
     nextState = {
       ...nextState,
       islandHitCount,
       islandFires: [...(nextState.islandFires ?? []), ...createIslandFires(islandHitCount, rng)],
+      dockedShips: dockedShip ? [...(nextState.dockedShips ?? []), dockedShip] : (nextState.dockedShips ?? []),
       resolvedShipCount: nextState.resolvedShipCount + 1,
       damageFlashUntilMs: nowMs + config.RENDER.DAMAGE_FLASH_DURATION_MS,
       gameOverDialogAtMs: nextState.gameOver ? nowMs + config.RENDER.GAME_OVER_REVEAL_DELAY_MS : 0,
@@ -200,4 +204,31 @@ function createIslandFires(islandHitCount, rng) {
     rotation: randomBetween(-0.22, 0.22, rng),
     variantIndex: index % 2
   }));
+}
+
+function createDockedShip(ship, islandHitCount, config) {
+  if (!ship) {
+    return null;
+  }
+
+  const position = getDockedShipPosition(islandHitCount, config);
+  return {
+    ...ship,
+    id: `${ship.id}-docked`,
+    x: position.x,
+    y: position.y,
+    speed: 0,
+    active: false,
+    breached: true,
+    docked: true
+  };
+}
+
+function getDockedShipPosition(islandHitCount, config) {
+  const slotIndex = (islandHitCount - 1) % config.HEALTH.INITIAL_HEALTH;
+  const slotSpacing = config.PLAYFIELD.VIRTUAL_HEIGHT / (config.HEALTH.INITIAL_HEALTH + 1);
+  return {
+    x: config.PLAYFIELD.DAMAGE_PERIMETER_X + config.PLAYFIELD.SHIP_WIDTH * 0.42,
+    y: slotSpacing * (slotIndex + 1) + config.PLAYFIELD.SAFE_TOP_PADDING * 0.2
+  };
 }

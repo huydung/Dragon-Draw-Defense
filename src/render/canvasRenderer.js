@@ -1,6 +1,8 @@
 import { GAME_CONFIG } from "../config.js";
 import { createAnimatedTemplatePath, getTemplateBounds, scaleTemplatePoint } from "./glyphTemplateAnimation.js";
 
+const CRAWLING_DRAGONS = new Set(["Earth", "Metal", "Shadow", "Water"]);
+
 export class CanvasRenderer {
   constructor(canvas, hudElements, config = GAME_CONFIG) {
     this.canvas = canvas;
@@ -31,7 +33,7 @@ export class CanvasRenderer {
     this.drawDamageFlash(state, nowMs);
     this.drawDragons(state.activeElements, state.lasers, nowMs, state.islandHitCount ?? 0);
     this.drawIslandFires(state.islandFires ?? [], nowMs);
-    this.drawShips(state.ships, nowMs);
+    this.drawShips([...(state.dockedShips ?? []), ...state.ships], nowMs);
     this.drawLasers(state.lasers, nowMs);
     this.drawExplosions(state.explosions, nowMs);
     this.drawTrail(trailState, nowMs);
@@ -292,23 +294,6 @@ export class CanvasRenderer {
     this.ctx.fillStyle = this.config.RENDER.COLORS.FAILURE;
     this.ctx.fillRect(0, 0, this.config.PLAYFIELD.VIRTUAL_WIDTH, this.config.PLAYFIELD.VIRTUAL_HEIGHT);
     this.ctx.restore();
-    this.drawHabitatDamage(alpha, nowMs);
-  }
-
-  drawHabitatDamage(alpha, nowMs) {
-    const pulse = 0.72 + Math.sin(nowMs / 70) * 0.18;
-    const impactX = this.config.PLAYFIELD.DAMAGE_PERIMETER_X - 10;
-    const impactY = this.config.PLAYFIELD.VIRTUAL_HEIGHT * 0.58;
-
-    this.ctx.save();
-    this.ctx.globalAlpha = Math.min(1, alpha * 1.35);
-    this.ctx.strokeStyle = "rgba(255, 244, 199, 0.78)";
-    this.ctx.lineWidth = 2;
-    this.drawLine({ x: impactX + 72, y: impactY - 48 }, { x: impactX + 8, y: impactY - 10 });
-    this.drawSprite(this.habitatImages.cannonball, impactX + 8, impactY - 10, 14, 14, 0, 0.95);
-    this.drawSprite(this.habitatImages.fire1, impactX - 12, impactY + 10, 24 * pulse, 50 * pulse, 0, 0.9);
-    this.drawSprite(this.habitatImages.fire2, impactX + 15, impactY + 18, 20 * pulse, 45 * pulse, 0, 0.82);
-    this.ctx.restore();
   }
 
   drawIslandFires(islandFires, nowMs) {
@@ -336,7 +321,8 @@ export class CanvasRenderer {
       const drawX = position.x + idle.x + attackPulse * this.config.RENDER.DRAGON_ATTACK_LUNGE_PX;
       const drawY = position.y + idle.y - attackPulse * this.config.RENDER.DRAGON_ATTACK_LIFT_PX;
       const scale = 1 + attackPulse * this.config.RENDER.DRAGON_ATTACK_SCALE;
-      const rotation = dragonsDefeated ? -Math.PI / 2 : idle.rotation + attackPulse * 0.12;
+      const defeatRotation = CRAWLING_DRAGONS.has(name) ? -Math.PI : -Math.PI / 2;
+      const rotation = dragonsDefeated ? defeatRotation : idle.rotation + attackPulse * 0.12;
 
       this.ctx.save();
       this.ctx.translate(drawX, drawY);
@@ -390,7 +376,7 @@ export class CanvasRenderer {
   }
 
   drawShips(ships, nowMs) {
-    ships.filter((ship) => ship.active).forEach((ship) => this.drawShip(ship, nowMs));
+    ships.filter((ship) => ship.active || ship.docked).forEach((ship) => this.drawShip(ship, nowMs));
   }
 
   drawShip(ship, nowMs) {
