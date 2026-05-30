@@ -11,8 +11,6 @@ import "./styles.css";
 const canvas = document.querySelector("#game-canvas");
 const restartButton = document.querySelector("#restart-game");
 const audioButton = document.querySelector("#audio-toggle");
-const mainMenu = document.querySelector("#main-menu");
-const startButton = document.querySelector("#start-game");
 
 const renderer = new CanvasRenderer(canvas, {
   health: document.querySelector("#health"),
@@ -64,15 +62,15 @@ document.documentElement.style.setProperty("--button-art", `url("${GAME_CONFIG.R
 
 audioButton?.addEventListener("click", () => audio.toggle());
 
-startButton.addEventListener("click", () => {
+canvas.addEventListener("pointerdown", () => {
+  if (!gameState.menuActive) return;
   audio.unlock();
-  mainMenu.hidden = true;
-  requestAnimationFrame(tick);
-});
+  gameState = { ...gameState, menuActive: false };
+}, { passive: true });
 
 const input = new GestureInput(canvas, {
   onCommit(points) {
-    if (gameState.gameOver) {
+    if (gameState.gameOver || gameState.menuActive) {
       return;
     }
 
@@ -108,6 +106,7 @@ const input = new GestureInput(canvas, {
 
 renderer.start();
 input.start();
+requestAnimationFrame(tick);
 restartButton.addEventListener("click", () => {
   audio.play("click");
   gameState = {

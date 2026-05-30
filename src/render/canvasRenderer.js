@@ -35,8 +35,13 @@ export class CanvasRenderer {
     this.drawLasers(state.lasers, nowMs);
     this.drawExplosions(state.explosions, nowMs);
     this.drawTrail(trailState, nowMs);
-    this.drawWaveSelectionDialog(state, nowMs);
+    if (!state.menuActive) {
+      this.drawWaveSelectionDialog(state, nowMs);
+    }
     this.renderFeedback(state.feedback);
+    if (state.menuActive) {
+      this.drawMainMenu(nowMs);
+    }
   }
 
   loadShipImages() {
@@ -97,6 +102,16 @@ export class CanvasRenderer {
   }
 
   renderHud(state) {
+    const menuActive = state.menuActive ?? false;
+    const displayValue = menuActive ? "none" : "";
+    this.hudElements.health.style.display = displayValue;
+    this.hudElements.wave.style.display = displayValue;
+    this.hudElements.score.style.display = displayValue;
+    if (menuActive) {
+      this.hudSnapshot = {};
+      return;
+    }
+
     const nextSnapshot = {
       health: `${this.config.RENDER.HUD_HEART.repeat(state.health)}`,
       wave: `WAVE ${String(state.wave).padStart(2, "0")}`,
@@ -759,6 +774,106 @@ export class CanvasRenderer {
       this.ctx.lineTo(point.x, point.y);
     });
     this.ctx.stroke();
+  }
+
+  drawMainMenu(nowMs) {
+    const { VIRTUAL_WIDTH, VIRTUAL_HEIGHT } = this.config.PLAYFIELD;
+    const colors = this.config.RENDER.COLORS;
+    const gap = this.config.UI.HUD_GAP_PX;
+    const accentColor = this.config.GESTURES.TRAIL_COLOR;
+    const radius = this.config.UI.PANEL_RADIUS_PX;
+    const borderWidth = this.config.RENDER.CANVAS_BORDER_WIDTH;
+    const font = this.config.UI.FONT_FAMILY;
+    const cx = VIRTUAL_WIDTH / 2;
+
+    const panelW = 500;
+    const panelH = 310;
+    const panelX = (VIRTUAL_WIDTH - panelW) / 2;
+    const panelY = (VIRTUAL_HEIGHT - panelH) / 2;
+
+    this.ctx.save();
+
+    this.ctx.fillStyle = "rgba(7, 11, 22, 0.9)";
+    this.ctx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+
+    this.ctx.fillStyle = colors.SELECTION_PANEL;
+    this.ctx.strokeStyle = accentColor;
+    this.ctx.lineWidth = borderWidth * 2;
+    this.ctx.beginPath();
+    this.ctx.roundRect(panelX, panelY, panelW, panelH, radius);
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    this.ctx.fillStyle = accentColor;
+    this.ctx.font = `900 22px ${font}`;
+    this.ctx.textAlign = "center";
+    this.ctx.textBaseline = "middle";
+    this.ctx.fillText("Dragon Draw Defense", cx, panelY + 30);
+
+    this.ctx.fillStyle = colors.MUTED_TEXT;
+    this.ctx.font = `400 10px ${font}`;
+    this.ctx.fillText("VIKING RAID SENTRY", cx, panelY + 50);
+
+    this.ctx.strokeStyle = "rgba(170, 184, 199, 0.18)";
+    this.ctx.lineWidth = borderWidth;
+    this.ctx.beginPath();
+    this.ctx.moveTo(panelX + gap * 2, panelY + 66);
+    this.ctx.lineTo(panelX + panelW - gap * 2, panelY + 66);
+    this.ctx.stroke();
+
+    this.ctx.fillStyle = colors.MUTED_TEXT;
+    this.ctx.font = `700 10px ${font}`;
+    this.ctx.textAlign = "left";
+    this.ctx.fillText("HOW TO PLAY", panelX + gap * 2, panelY + 82);
+
+    const tips = [
+      "Ships come in waves — each wave grows harder",
+      "Don't let 3 ships reach your island",
+      "Draw the correct shape to command your dragon's attack",
+      "Draw in the correct ORDER — not just the right shape"
+    ];
+
+    tips.forEach((tip, index) => {
+      const tipY = panelY + 106 + index * 32;
+      const iconX = panelX + gap * 2 + 9;
+
+      this.ctx.fillStyle = colors.SELECTION_ACTIVE;
+      this.ctx.beginPath();
+      this.ctx.arc(iconX, tipY, 9, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      this.ctx.fillStyle = accentColor;
+      this.ctx.font = `700 9px ${font}`;
+      this.ctx.textAlign = "center";
+      this.ctx.textBaseline = "middle";
+      this.ctx.fillText(String(index + 1), iconX, tipY);
+
+      this.ctx.fillStyle = colors.TEXT;
+      this.ctx.font = `400 12px ${font}`;
+      this.ctx.textAlign = "left";
+      this.ctx.fillText(tip, panelX + gap * 2 + 24, tipY);
+    });
+
+    const btnW = panelW - gap * 4;
+    const btnH = 36;
+    const btnX = panelX + gap * 2;
+    const btnY = panelY + panelH - gap * 2 - btnH;
+    const pulse = 0.78 + Math.sin(nowMs * 0.0024) * 0.22;
+
+    this.ctx.globalAlpha = pulse;
+    this.ctx.fillStyle = accentColor;
+    this.ctx.beginPath();
+    this.ctx.roundRect(btnX, btnY, btnW, btnH, this.config.UI.BUTTON_RADIUS_PX);
+    this.ctx.fill();
+    this.ctx.globalAlpha = 1;
+
+    this.ctx.fillStyle = colors.PAGE_BACKGROUND;
+    this.ctx.font = `900 13px ${font}`;
+    this.ctx.textAlign = "center";
+    this.ctx.textBaseline = "middle";
+    this.ctx.fillText("TAP TO START", cx, btnY + btnH / 2);
+
+    this.ctx.restore();
   }
 }
 

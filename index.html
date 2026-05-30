@@ -19,36 +19,6 @@
         <div id="feedback" aria-live="polite"></div>
         <div id="wave-banner" aria-live="polite"></div>
 
-        <div id="main-menu">
-          <section id="main-menu-panel" role="dialog" aria-modal="true" aria-labelledby="main-menu-title">
-            <h1 id="main-menu-title">Dragon Draw Defense</h1>
-
-
-            <section id="how-to-play" aria-label="How to play">
-              <h2>How to Play</h2>
-              <ul>
-                <li>
-                  <span class="tip-icon">⚓</span>
-                  <span><strong>Enemy ships arrive in waves</strong> — each wave is faster and brings more ships.</span>
-                </li>
-                <li>
-                  <span class="tip-icon">🏝</span>
-                  <span>Don't let <strong>3 ships reach your island</strong> or the defense falls.</span>
-                </li>
-                <li>
-                  <span class="tip-icon">🐉</span>
-                  <span><strong>Draw the shape</strong> shown on a ship's flag to command a dragon to destroy it.</span>
-                </li>
-                <li>
-                  <span class="tip-icon">✍</span>
-                  <span><strong>The order of your drawing strokes matters</strong> — watch the animated dots on the flag to learn the correct drawing sequence.</span>
-                </li>
-              </ul>
-            </section>
-
-            <button id="start-game" type="button">Start Game</button>
-          </section>
-        </div>
 
         <div id="game-over" hidden>
           <section id="game-over-panel" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
@@ -64,12 +34,7 @@
           </section>
         </div>
 
-        <a id="sandbox-link" href="./sandbox.html">
-          Sandbox
-        </a>
-        <button id="audio-toggle" type="button" aria-pressed="true">
-          Audio On
-        </button>
+        <button id="audio-toggle" type="button" aria-label="Audio on" aria-pressed="true"></button>
       </section>
     </main>
 

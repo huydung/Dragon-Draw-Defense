@@ -150,14 +150,14 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--hud-gap);
-  align-items: center;
+  align-items: start;
 }
 
 .canvas-card {
   min-width: 0;
   display: grid;
   gap: var(--hud-gap);
-  align-content: center;
+  align-content: start;
 }
 
 .canvas-card h3 {

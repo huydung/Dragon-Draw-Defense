@@ -14,7 +14,8 @@ export function createInitialGameState(config = GAME_CONFIG, rng = Math.random, 
       lasers: [],
       explosions: [],
       feedback: null,
-      gameOver: false
+      gameOver: false,
+      menuActive: true
     },
     1,
     nowMs,
@@ -24,7 +25,7 @@ export function createInitialGameState(config = GAME_CONFIG, rng = Math.random, 
 }
 
 export function advanceGameState(state, nowMs, rng = Math.random, config = GAME_CONFIG) {
-  if (state.gameOver) {
+  if (state.menuActive || state.gameOver) {
     return {
       ...state,
       lastUpdateMs: nowMs
@@ -70,7 +71,7 @@ export function advanceGameState(state, nowMs, rng = Math.random, config = GAME_
 }
 
 export function restartGame(nowMs, rng = Math.random, config = GAME_CONFIG) {
-  return createInitialGameState(config, rng, nowMs);
+  return { ...createInitialGameState(config, rng, nowMs), menuActive: false };
 }
 
 export function getWaveShipCount(wave, config = GAME_CONFIG) {

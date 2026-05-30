@@ -39,6 +39,7 @@ The game simulation uses a fixed virtual playfield:
 - Aspect ratio: 16:9
 
 All world calculations use this coordinate system. Browser layout scales the canvas to the full page with letterboxing. Do not use CSS pixel dimensions for gameplay rules.
+ALL UI elements, game characters, event handlers, etc. must be created inside the Canvas. The html is purely a container. Do not put any logic or visuals in html.
 
 4. Centralized Configuration
 
